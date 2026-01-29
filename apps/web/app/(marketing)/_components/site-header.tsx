@@ -10,13 +10,16 @@ import { AppLogo } from '~/components/app-logo';
 import { SiteHeaderAccountSection } from './site-header-account-section';
 import { SiteNavigation } from './site-navigation';
 import { SearchButton } from './search-button';
+import { DiscoverButton } from './discover-button';
 import { SearchModal } from './bookstore/search-modal';
+import { BookDiscoveryModal } from './bookstore/book-discovery-modal';
 import { mockBooks } from '~/lib/../data/mock-books';
 import { mockCategories } from '~/lib/../data/mock-categories';
 import { mockAuthors } from '~/lib/../data/mock-authors';
 
 export function SiteHeader(props: { user?: JwtPayload | null }) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isDiscoveryOpen, setIsDiscoveryOpen] = useState(false);
 
   return (
     <>
@@ -26,6 +29,7 @@ export function SiteHeader(props: { user?: JwtPayload | null }) {
         actions={
           <>
             <SearchButton onClick={() => setIsSearchOpen(true)} />
+            <DiscoverButton onClick={() => setIsDiscoveryOpen(true)} />
             <SiteHeaderAccountSection user={props.user ?? null} />
           </>
         }
@@ -36,6 +40,11 @@ export function SiteHeader(props: { user?: JwtPayload | null }) {
         authors={mockAuthors}
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
+      />
+      <BookDiscoveryModal
+        books={mockBooks}
+        isOpen={isDiscoveryOpen}
+        onClose={() => setIsDiscoveryOpen(false)}
       />
     </>
   );
