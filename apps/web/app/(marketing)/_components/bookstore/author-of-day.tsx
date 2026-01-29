@@ -43,7 +43,7 @@ export function AuthorOfTheDay({ featured, className }: AuthorOfTheDayProps) {
               />
             </div>
 
-            <h2 className="text-3xl font-bold text-black mb-2">
+            <h2 className="text-3xl font-bold text-black dark:text-beige mb-2">
               {author.name}
             </h2>
 

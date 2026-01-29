@@ -86,7 +86,7 @@ export function BookCard({
           </Button>
         </div>
         <div className="mt-3">
-          <h3 className="font-semibold text-black line-clamp-1 text-sm">
+          <h3 className="font-semibold text-black line-clamp-1 text-sm dark:text-beige">
             {book.title}
           </h3>
           <p className="text-xs text-muted-foreground mt-1">
@@ -107,13 +107,13 @@ export function BookCard({
   return (
     <Link
       href="#"
-      className={cn(className)}
+      className={cn('h-full flex flex-col', className)}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       <Card className={cn(
-        'overflow-hidden transition-shadow duration-200',
-        isHovered && 'shadow-lg'
+        'h-full flex flex-col overflow-hidden transition-all duration-300 ease-out border-border/50',
+        isHovered && 'shadow-xl scale-[1.02] border-orange/50'
       )}>
         <div className="relative aspect-[2/3] overflow-hidden bg-beige">
           <Image
@@ -122,17 +122,24 @@ export function BookCard({
             fill
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             className={cn(
-              'object-cover transition-transform duration-200',
-              isHovered && 'scale-105'
+              'object-cover transition-transform duration-300 ease-out',
+              isHovered && 'scale-110'
             )}
             loading="lazy"
           />
-          <Badge className="absolute top-2 right-2 bg-orange text-white">
+          <div className={cn(
+            'absolute inset-0 bg-gradient-to-t from-black/20 to-transparent transition-opacity duration-300',
+            isHovered ? 'opacity-100' : 'opacity-0'
+          )} />
+          <Badge className={cn(
+            'absolute top-2 right-2 bg-orange text-white transition-transform duration-300',
+            isHovered && 'scale-110'
+          )}>
             ${book.price.toFixed(2)}
           </Badge>
         </div>
-        <CardContent className="p-4">
-          <h3 className="font-semibold text-black line-clamp-1 mb-1">
+        <CardContent className="p-4 flex-1 flex flex-col">
+          <h3 className="font-semibold text-black line-clamp-1 mb-1 transition-colors duration-200 dark:text-beige">
             {book.title}
           </h3>
           <p className="text-sm text-muted-foreground mb-2">
@@ -157,7 +164,10 @@ export function BookCard({
             ))}
           </div>
           <Button
-            className="w-full bg-orange hover:bg-orange/90"
+            className={cn(
+              'w-full bg-orange hover:bg-orange/90 transition-all duration-300 mt-auto',
+              isHovered && 'shadow-md'
+            )}
             onClick={handleAddToCart}
           >
             <ShoppingCart className="w-4 h-4 mr-2" />

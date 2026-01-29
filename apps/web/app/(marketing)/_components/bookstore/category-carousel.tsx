@@ -38,7 +38,7 @@ export function CategoryCarousel({
             <Card className="group overflow-hidden transition-all hover:shadow-lg hover:-translate-y-1 h-full">
               <CardContent className="p-6 text-center">
                 <div className="text-4xl mb-3">{category.icon}</div>
-                <h3 className="font-semibold text-black mb-2">
+                <h3 className="font-semibold text-black dark:text-beige mb-2">
                   {category.name}
                 </h3>
                 <Badge variant="secondary" className="text-xs">
