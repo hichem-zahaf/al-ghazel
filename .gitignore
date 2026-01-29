@@ -56,3 +56,6 @@ QWEN.md
 # env
 .env.production
 .env.local
+
+# dev local
+temporary-dev-local-files
