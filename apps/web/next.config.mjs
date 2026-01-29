@@ -71,9 +71,16 @@ function getRemotePatterns() {
     });
   }
 
+  // Add Unsplash for book cover images
+  remotePatterns.push({
+    protocol: 'https',
+    hostname: 'images.unsplash.com',
+  });
+
   return IS_PRODUCTION
     ? remotePatterns
     : [
+        ...remotePatterns,
         {
           protocol: 'http',
           hostname: '127.0.0.1',

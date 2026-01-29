@@ -37,6 +37,12 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
+  /* Bookstore theme color mappings */
+  --color-beige-light: #FAF3E1;
+  --color-beige: #F5E7C6;
+  --color-orange: #FA8112;
+  --color-black: #222222;
+
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
@@ -113,4 +119,13 @@
       transform: translateY(0px);
     }
   }
+}
+
+/* Scrollbar hide utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }

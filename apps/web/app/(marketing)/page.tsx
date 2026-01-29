@@ -1,144 +1,80 @@
-import Image from 'next/image';
-import Link from 'next/link';
+/**
+ * Bookstore Marketing Page
+ * Immersive bookstore website with horizontal scrolling sections
+ */
 
-import { ArrowRightIcon, LayoutDashboard } from 'lucide-react';
+'use client';
 
-import {
-  CtaButton,
-  FeatureCard,
-  FeatureGrid,
-  FeatureShowcase,
-  FeatureShowcaseIconContainer,
-  Hero,
-  Pill,
-} from '@kit/ui/marketing';
-import { Trans } from '@kit/ui/trans';
+import { HeroSection } from './_components/bookstore/hero-section';
+import { CategoryCarousel } from './_components/bookstore/category-carousel';
+import { BookOfTheDay } from './_components/bookstore/book-of-day';
+import { AuthorOfTheDay } from './_components/bookstore/author-of-day';
+import { RecommendedBooks } from './_components/bookstore/recommended-books';
+import { ForYouSection } from './_components/bookstore/for-you-section';
+import { SearchSection } from './_components/bookstore/search-section';
+import { BookRoulette } from './_components/bookstore/book-roulette';
+import { mockBooks, bookOfTheDay, authorOfTheDay } from '../../data/mock-books';
+import { mockCategories } from '../../data/mock-categories';
+import { mockAuthors } from '../../data/mock-authors';
 
-import { withI18n } from '~/lib/i18n/with-i18n';
+function BookstoreHome() {
+  // Get different book sets for each section
+  const trendingBooks = mockBooks.slice(0, 6);
+  const recommendedBooks = mockBooks.slice(6, 12);
+  const forYouBooks = mockBooks.slice(12, 24);
+  const rouletteBooks = mockBooks.slice(0, 8);
 
-function Home() {
   return (
-    <div className={'mt-4 flex flex-col space-y-24 py-14'}>
-      <div className={'container mx-auto'}>
-        <Hero
-          pill={
-            <Pill label={'New'}>
-              <span>The leading SaaS Starter Kit for ambitious developers</span>
-            </Pill>
-          }
-          title={
-            <>
-              <span>The ultimate SaaS Starter</span>
-              <span>for your next project</span>
-            </>
-          }
-          subtitle={
-            <span>
-              Build and Ship a SaaS faster than ever before with the next-gen
-              SaaS Starter Kit. Ship your SaaS in days, not months.
-            </span>
-          }
-          cta={<MainCallToActionButton />}
-          image={
-            <Image
-              priority
-              className={
-                'dark:border-primary/10 rounded-2xl border border-gray-200'
-              }
-              width={3558}
-              height={2222}
-              src={`/images/dashboard.webp`}
-              alt={`App Image`}
-            />
-          }
-        />
-      </div>
+    <div className="min-h-screen bg-beige-light">
+      {/* Hero Section */}
+      <HeroSection />
 
-      <div className={'container mx-auto'}>
-        <div
-          className={'flex flex-col space-y-16 xl:space-y-32 2xl:space-y-36'}
-        >
-          <FeatureShowcase
-            heading={
-              <>
-                <b className="font-semibold dark:text-white">
-                  The ultimate SaaS Starter Kit
-                </b>
-                .{' '}
-                <span className="text-muted-foreground font-normal">
-                  Unleash your creativity and build your SaaS faster than ever
-                  with Makerkit.
-                </span>
-              </>
-            }
-            icon={
-              <FeatureShowcaseIconContainer>
-                <LayoutDashboard className="h-5" />
-                <span>All-in-one solution</span>
-              </FeatureShowcaseIconContainer>
-            }
-          >
-            <FeatureGrid>
-              <FeatureCard
-                className={'relative col-span-2 overflow-hidden'}
-                label={'Beautiful Dashboard'}
-                description={`Makerkit provides a beautiful dashboard to manage your SaaS business.`}
-              />
+      {/* Main Content */}
+      <div className="flex flex-col space-y-24 py-12">
+        {/* Categories */}
+        <section id="categories" className="container mx-auto px-4">
+          <CategoryCarousel
+            categories={mockCategories}
+            title="Browse by Category"
+          />
+        </section>
 
-              <FeatureCard
-                className={
-                  'relative col-span-2 w-full overflow-hidden lg:col-span-1'
-                }
-                label={'Authentication'}
-                description={`Makerkit provides a variety of providers to allow your users to sign in.`}
-              />
+        {/* Book of the Day */}
+        <section id="book-of-the-day" className="container mx-auto px-4">
+          <BookOfTheDay featured={bookOfTheDay} />
+        </section>
 
-              <FeatureCard
-                className={'relative col-span-2 overflow-hidden lg:col-span-1'}
-                label={'Multi Tenancy'}
-                description={`Multi tenant memberships for your SaaS business.`}
-              />
+        {/* Author of the Day */}
+        <section id="authors" className="container mx-auto px-4">
+          <AuthorOfTheDay featured={authorOfTheDay} />
+        </section>
 
-              <FeatureCard
-                className={'relative col-span-2 overflow-hidden'}
-                label={'Billing'}
-                description={`Makerkit supports multiple payment gateways to charge your customers.`}
-              />
-            </FeatureGrid>
-          </FeatureShowcase>
-        </div>
+        {/* Recommended Books */}
+        <section id="bestsellers" className="container mx-auto px-4">
+          <RecommendedBooks books={recommendedBooks} />
+        </section>
+
+        {/* For You Section */}
+        <section id="new-releases" className="container mx-auto px-4">
+          <ForYouSection books={forYouBooks} />
+        </section>
+
+        {/* Book Roulette */}
+        <section id="sale" className="container mx-auto px-4">
+          <BookRoulette books={rouletteBooks} />
+        </section>
+
+        {/* Search Section */}
+        <section className="container mx-auto px-4">
+          <SearchSection
+            books={mockBooks}
+            categories={mockCategories}
+            authors={mockAuthors}
+          />
+        </section>
       </div>
     </div>
   );
 }
 
-export default withI18n(Home);
-
-function MainCallToActionButton() {
-  return (
-    <div className={'flex space-x-4'}>
-      <CtaButton>
-        <Link href={'/auth/sign-up'}>
-          <span className={'flex items-center space-x-0.5'}>
-            <span>
-              <Trans i18nKey={'common:getStarted'} />
-            </span>
-
-            <ArrowRightIcon
-              className={
-                'animate-in fade-in slide-in-from-left-8 h-4' +
-                ' zoom-in fill-mode-both delay-1000 duration-1000'
-              }
-            />
-          </span>
-        </Link>
-      </CtaButton>
-
-      <CtaButton variant={'link'}>
-        <Link href={'/contact'}>
-          <Trans i18nKey={'common:contactUs'} />
-        </Link>
-      </CtaButton>
-    </div>
-  );
-}
+export default BookstoreHome;
