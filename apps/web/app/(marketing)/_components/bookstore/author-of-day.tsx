@@ -24,7 +24,7 @@ export function AuthorOfTheDay({ featured, className }: AuthorOfTheDayProps) {
 
   return (
     <section
-      className={cn('bg-white rounded-3xl shadow-sm overflow-hidden', className)}
+      className={cn('bg-white dark:bg-card rounded-3xl shadow-sm overflow-hidden', className)}
     >
       <div className="container mx-auto px-4 py-12">
         <div className="flex flex-col lg:flex-row gap-12 items-start">
@@ -47,15 +47,15 @@ export function AuthorOfTheDay({ featured, className }: AuthorOfTheDayProps) {
               {author.name}
             </h2>
 
-            <div className="bg-beige-light rounded-lg p-6 mb-6">
-              <h3 className="font-semibold text-black mb-3">About</h3>
+            <div className="bg-beige-light dark:bg-neutral-800 rounded-lg p-6 mb-6">
+              <h3 className="font-semibold text-black dark:text-beige mb-3">About</h3>
               <p className="text-muted-foreground leading-relaxed">
                 {author.bio}
               </p>
             </div>
 
-            <div className="bg-beige-light rounded-lg p-6 mb-6">
-              <h3 className="font-semibold text-black mb-3">
+            <div className="bg-beige-light dark:bg-neutral-800 rounded-lg p-6 mb-6">
+              <h3 className="font-semibold text-black dark:text-beige mb-3">
                 Why we featured them
               </h3>
               <p className="text-muted-foreground leading-relaxed">{reason}</p>
@@ -107,7 +107,7 @@ export function AuthorOfTheDay({ featured, className }: AuthorOfTheDayProps) {
 
           {/* Featured Books */}
           <div className="flex-1 min-w-0">
-            <h3 className="text-2xl font-bold text-black mb-6">
+            <h3 className="text-2xl font-bold text-black dark:text-beige mb-6">
               Featured Books by {author.name}
             </h3>
             <BookCarousel books={featuredBooks} />

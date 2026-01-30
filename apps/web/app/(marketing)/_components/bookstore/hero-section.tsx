@@ -20,6 +20,7 @@ import Link from 'next/link';
 import { mockBooks } from '../../../../data/mock-books';
 import { mockAuthors } from '../../../../data/mock-authors';
 import { BookCarousel } from './book-carousel';
+import { GridBackground } from './grid-background';
 
 const navigationItems = [
   { icon: HomeIcon, label: 'Home', href: '#' },
@@ -36,8 +37,9 @@ export function HeroSection() {
   const featuredBooks = mockBooks.slice(0, 6);
 
   return (
-    <section className="relative min-h-[80vh] bg-beige-light">
-      <div className="container mx-auto px-4 py-12">
+    <section className="relative min-h-[80vh] bg-background overflow-hidden">
+      <GridBackground />
+      <div className="container mx-auto px-4 py-12 relative z-10">
         <div className="flex gap-8">
           {/* Sidebar Navigation - Hidden on mobile/tablet */}
           <aside className="hidden lg:block w-[280px] flex-shrink-0">
@@ -46,7 +48,7 @@ export function HeroSection() {
                 <Link
                   key={item.label}
                   href={item.href}
-                  className="flex items-center gap-3 px-4 py-3 rounded-lg text-black hover:bg-beige transition-colors group"
+                  className="flex items-center gap-3 px-4 py-3 rounded-lg text-black dark:text-beige hover:bg-beige dark:hover:bg-neutral-800 transition-colors group"
                 >
                   <item.icon className="w-5 h-5 text-orange group-hover:scale-110 transition-transform" />
                   <span className="font-medium">{item.label}</span>
@@ -59,7 +61,7 @@ export function HeroSection() {
           <div className="flex-1 min-w-0">
             {/* Headline */}
             <div className="mb-12">
-              <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-black leading-tight mb-4">
+              <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-black dark:text-beige leading-tight mb-4">
                 Keep the story
                 <span className="block text-orange">going..</span>
               </h1>
@@ -70,7 +72,7 @@ export function HeroSection() {
             </div>
 
             {/* Author Profile Card */}
-            <div className="mb-12 p-6 bg-white rounded-2xl shadow-sm">
+            <div className="mb-12 p-6 bg-white dark:bg-card rounded-2xl shadow-sm border-l-4 border-orange">
               <div className="flex items-start gap-6">
                 <div className="relative w-24 h-24 flex-shrink-0">
                   <Image
@@ -85,7 +87,7 @@ export function HeroSection() {
                   <h3 className="text-sm font-semibold text-orange mb-1">
                     Featured Author
                   </h3>
-                  <h2 className="text-2xl font-bold text-black mb-2">
+                  <h2 className="text-2xl font-bold text-black dark:text-beige mb-2">
                     {featuredAuthor.name}
                   </h2>
                   <p className="text-muted-foreground mb-4 line-clamp-2">
@@ -93,7 +95,7 @@ export function HeroSection() {
                   </p>
                   <Link
                     href="#"
-                    className="text-sm font-semibold text-black hover:text-orange transition-colors inline-flex items-center gap-1"
+                    className="text-sm font-semibold text-black dark:text-beige hover:text-orange transition-colors inline-flex items-center gap-1"
                   >
                     View all books →
                   </Link>
@@ -103,7 +105,7 @@ export function HeroSection() {
 
             {/* Featured Books Carousel */}
             <div>
-              <h2 className="text-2xl font-bold text-black mb-6">
+              <h2 className="text-2xl font-bold text-black dark:text-beige mb-6">
                 Trending This Week
               </h2>
               <BookCarousel books={featuredBooks} />

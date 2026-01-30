@@ -22,7 +22,7 @@ export function SectionHeader({
   return (
     <div className={cn('flex items-center justify-between mb-6', className)}>
       <div>
-        <h2 className="text-3xl font-bold tracking-tight text-black">
+        <h2 className="text-3xl font-bold tracking-tight text-black dark:text-beige">
           {title}
         </h2>
         {subtitle && (

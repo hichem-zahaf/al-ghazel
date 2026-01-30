@@ -60,7 +60,7 @@ export function BookCard({
           'relative overflow-hidden rounded-lg transition-transform duration-200',
           isHovered && 'scale-105'
         )}>
-          <div className="relative aspect-[2/3] overflow-hidden rounded-lg bg-beige">
+          <div className="relative aspect-[2/3] overflow-hidden rounded-lg bg-beige dark:bg-neutral-800">
             <Image
               src={book.coverImage}
               alt={book.title}
@@ -115,7 +115,7 @@ export function BookCard({
         'h-full flex flex-col overflow-hidden transition-all duration-300 ease-out border-border/50',
         isHovered && 'shadow-xl scale-[1.02] border-orange/50'
       )}>
-        <div className="relative aspect-[2/3] overflow-hidden bg-beige">
+        <div className="relative aspect-[2/3] overflow-hidden bg-beige dark:bg-neutral-800">
           <Image
             src={book.coverImage}
             alt={book.title}

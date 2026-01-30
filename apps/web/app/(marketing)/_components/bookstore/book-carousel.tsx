@@ -26,7 +26,7 @@ export function BookCarousel({
   return (
     <div className={cn('w-full', className)}>
       {title && (
-        <h2 className="text-2xl font-bold text-black mb-4">{title}</h2>
+        <h2 className="text-2xl font-bold text-black dark:text-beige mb-4">{title}</h2>
       )}
       <HorizontalScroller>
         {books.map((book) => (

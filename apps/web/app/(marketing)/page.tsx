@@ -25,7 +25,7 @@ function BookstoreHome() {
   const rouletteBooks = mockBooks.slice(0, 8);
 
   return (
-    <div className="min-h-screen bg-beige-light">
+    <div className="min-h-screen bg-background">
       {/* Hero Section */}
       <HeroSection />
 

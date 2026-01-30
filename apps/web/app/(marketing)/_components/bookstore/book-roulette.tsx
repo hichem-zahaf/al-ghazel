@@ -85,13 +85,13 @@ export function BookRoulette({ books, className }: BookRouletteProps) {
   return (
     <section
       className={cn(
-        'bg-gradient-to-br from-orange/10 to-beige-light rounded-3xl overflow-hidden',
+        'bg-gradient-to-br from-orange/10 to-beige-light dark:to-neutral-900 rounded-3xl overflow-hidden',
         className
       )}
     >
       <div className="container mx-auto px-4 py-16 text-center">
         <div className="mb-8">
-          <h2 className="text-4xl font-bold text-black mb-4">
+          <h2 className="text-4xl font-bold text-black dark:text-beige mb-4">
             Book Roulette 🎰
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
@@ -242,7 +242,7 @@ export function BookRoulette({ books, className }: BookRouletteProps) {
 
                 {/* Book Details */}
                 <div className="flex-1">
-                  <h3 className="text-xl font-bold text-black mb-1">
+                  <h3 className="text-xl font-bold text-black dark:text-beige mb-1">
                     {selectedBook.title}
                   </h3>
                   <p className="text-muted-foreground mb-3">

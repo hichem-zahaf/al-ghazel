@@ -130,10 +130,10 @@ export function SearchSection({
   return (
     <section
       id="search"
-      className={cn('bg-white rounded-3xl shadow-sm overflow-hidden', className)}
+      className={cn('bg-white dark:bg-card rounded-3xl shadow-sm overflow-hidden', className)}
     >
       <div className="container mx-auto px-4 py-12">
-        <h2 className="text-3xl font-bold text-black mb-8">Search Books</h2>
+        <h2 className="text-3xl font-bold text-black dark:text-beige mb-8">Search Books</h2>
 
         {/* Search Input */}
         <div className="flex gap-4 mb-6">
@@ -162,9 +162,9 @@ export function SearchSection({
 
         {/* Filters */}
         {showFilters && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 p-6 bg-beige-light rounded-lg">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 p-6 bg-beige-light dark:bg-neutral-800 rounded-lg">
             <div>
-              <label className="block text-sm font-medium text-black mb-2">
+              <label className="block text-sm font-medium text-black dark:text-beige mb-2">
                 Category
               </label>
               <Select
@@ -191,7 +191,7 @@ export function SearchSection({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-black mb-2">
+              <label className="block text-sm font-medium text-black dark:text-beige mb-2">
                 Author
               </label>
               <Select
@@ -218,7 +218,7 @@ export function SearchSection({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-black mb-2">
+              <label className="block text-sm font-medium text-black dark:text-beige mb-2">
                 Min Price
               </label>
               <Input
@@ -237,7 +237,7 @@ export function SearchSection({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-black mb-2">
+              <label className="block text-sm font-medium text-black dark:text-beige mb-2">
                 Max Price
               </label>
               <Input
@@ -256,7 +256,7 @@ export function SearchSection({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-black mb-2">
+              <label className="block text-sm font-medium text-black dark:text-beige mb-2">
                 Min Rating
               </label>
               <Select
@@ -282,7 +282,7 @@ export function SearchSection({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-black mb-2">
+              <label className="block text-sm font-medium text-black dark:text-beige mb-2">
                 Sort By
               </label>
               <Select value={sortBy} onValueChange={(value: string) => setSortBy(value as SortOption)}>
@@ -322,7 +322,7 @@ export function SearchSection({
                 Search: "{filters.query}"
                 <button
                   onClick={() => setFilters({ ...filters, query: '' })}
-                  className="ml-1 hover:text-black"
+                  className="ml-1 hover:text-black dark:hover:text-beige"
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -333,7 +333,7 @@ export function SearchSection({
                 {categories.find((c) => c.id === filters.category)?.name}
                 <button
                   onClick={() => setFilters({ ...filters, category: undefined })}
-                  className="ml-1 hover:text-black"
+                  className="ml-1 hover:text-black dark:hover:text-beige"
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -344,7 +344,7 @@ export function SearchSection({
                 {authors.find((a) => a.id === filters.author)?.name}
                 <button
                   onClick={() => setFilters({ ...filters, author: undefined })}
-                  className="ml-1 hover:text-black"
+                  className="ml-1 hover:text-black dark:hover:text-beige"
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -366,7 +366,7 @@ export function SearchSection({
           {filteredBooks.length === 0 ? (
             <div className="text-center py-16">
               <Search className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-xl font-semibold text-black mb-2">
+              <h3 className="text-xl font-semibold text-black dark:text-beige mb-2">
                 No books found
               </h3>
               <p className="text-muted-foreground mb-6">

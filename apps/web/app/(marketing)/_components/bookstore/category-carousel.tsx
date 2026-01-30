@@ -26,7 +26,7 @@ export function CategoryCarousel({
   return (
     <div className={cn('w-full', className)}>
       {title && (
-        <h2 className="text-2xl font-bold text-black mb-6">{title}</h2>
+        <h2 className="text-2xl font-bold text-black dark:text-beige mb-6">{title}</h2>
       )}
       <HorizontalScroller>
         {categories.map((category) => (
