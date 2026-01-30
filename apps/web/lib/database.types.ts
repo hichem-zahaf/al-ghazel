@@ -113,6 +113,7 @@ export type Database = {
           avatar_url: string | null
           bio: string | null
           birth_date: string | null
+          book_count: number | null
           created_at: string | null
           created_by: string | null
           id: string
@@ -120,6 +121,8 @@ export type Database = {
           metadata: Json
           name: string
           nationality: string | null
+          social_links: Json | null
+          status: string | null
           updated_at: string | null
           updated_by: string | null
           website_url: string | null
@@ -128,6 +131,7 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           birth_date?: string | null
+          book_count?: number | null
           created_at?: string | null
           created_by?: string | null
           id?: string
@@ -135,6 +139,8 @@ export type Database = {
           metadata?: Json
           name: string
           nationality?: string | null
+          social_links?: Json | null
+          status?: string | null
           updated_at?: string | null
           updated_by?: string | null
           website_url?: string | null
@@ -143,6 +149,7 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           birth_date?: string | null
+          book_count?: number | null
           created_at?: string | null
           created_by?: string | null
           id?: string
@@ -150,6 +157,8 @@ export type Database = {
           metadata?: Json
           name?: string
           nationality?: string | null
+          social_links?: Json | null
+          status?: string | null
           updated_at?: string | null
           updated_by?: string | null
           website_url?: string | null
@@ -250,6 +259,7 @@ export type Database = {
           publisher: string | null
           rating: number | null
           rating_count: number | null
+          status: string | null
           stock_quantity: number | null
           subtitle: string | null
           title: string
@@ -278,6 +288,7 @@ export type Database = {
           publisher?: string | null
           rating?: number | null
           rating_count?: number | null
+          status?: string | null
           stock_quantity?: number | null
           subtitle?: string | null
           title: string
@@ -306,6 +317,7 @@ export type Database = {
           publisher?: string | null
           rating?: number | null
           rating_count?: number | null
+          status?: string | null
           stock_quantity?: number | null
           subtitle?: string | null
           title?: string
@@ -324,6 +336,7 @@ export type Database = {
       }
       categories: {
         Row: {
+          book_count: number | null
           created_at: string | null
           description: string | null
           display_order: number | null
@@ -335,6 +348,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          book_count?: number | null
           created_at?: string | null
           description?: string | null
           display_order?: number | null
@@ -346,6 +360,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          book_count?: number | null
           created_at?: string | null
           description?: string | null
           display_order?: number | null
