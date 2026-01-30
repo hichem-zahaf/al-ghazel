@@ -58,25 +58,22 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
 import { cn } from '@kit/ui/utils';
 import { Checkbox } from '@kit/ui/checkbox';
 import { AdminDataTable, FilterConfig } from '../_components/admin-data-table';
+import type { Book, Author, Category } from '../../../types/bookstore';
+import { mockBooks } from '../../../data/mock-books';
+import { mockAuthors } from '../../../data/mock-authors';
+import { mockCategories } from '../../../data/mock-categories';
 
-// Types
-interface Book {
-  id: string;
-  title: string;
-  author: string;
-  isbn: string;
-  price: number;
-  stock: number;
-  rating: number;
-  status: 'active' | 'inactive' | 'out_of_stock';
+// Extended Book interface with admin-specific fields
+interface BookWithAdmin extends Book {
+  stock?: number;
+  status?: 'active' | 'inactive' | 'out_of_stock';
 }
 
-interface Author {
-  id: string;
-  name: string;
-  bookCount: number;
-  nationality: string;
-  status: 'active' | 'inactive';
+// Extended Author interface with admin-specific fields
+interface AuthorWithAdmin extends Author {
+  bookCount?: number;
+  nationality?: string;
+  status?: 'active' | 'inactive';
 }
 
 interface Coupon {
@@ -91,18 +88,19 @@ interface Coupon {
   isActive: boolean;
 }
 
-// Mock Data
-const mockBooks: Book[] = [
-  { id: 'b1', title: 'The Midnight Library', author: 'Matt Haig', isbn: '978-0525559474', price: 16.99, stock: 45, rating: 4.5, status: 'active' },
-  { id: 'b2', title: 'Atomic Habits', author: 'James Clear', isbn: '978-0735211292', price: 14.50, stock: 32, rating: 4.8, status: 'active' },
-  { id: 'b3', title: 'The Silent Patient', author: 'Alex Michaelides', isbn: '978-1250301697', price: 12.99, stock: 0, rating: 4.3, status: 'out_of_stock' },
-];
+// Mock Data with admin extensions
+const adminBooks: BookWithAdmin[] = mockBooks.map(book => ({
+  ...book,
+  stock: Math.floor(Math.random() * 100),
+  status: 'active' as const,
+}));
 
-const mockAuthors: Author[] = [
-  { id: 'a1', name: 'Matt Haig', bookCount: 12, nationality: 'British', status: 'active' },
-  { id: 'a2', name: 'James Clear', bookCount: 3, nationality: 'American', status: 'active' },
-  { id: 'a3', name: 'Alex Michaelides', bookCount: 2, nationality: 'Cypriot', status: 'active' },
-];
+const adminAuthors: AuthorWithAdmin[] = mockAuthors.map(author => ({
+  ...author,
+  bookCount: Math.floor(Math.random() * 20) + 1,
+  nationality: 'International',
+  status: 'active' as const,
+}));
 
 const mockCoupons: Coupon[] = [
   { id: 'c1', code: 'SUMMER20', discountType: 'percentage', discountValue: 20, usageLimit: 100, usedCount: 45, validFrom: new Date('2024-01-01'), validUntil: new Date('2024-12-31'), isActive: true },
@@ -113,8 +111,8 @@ export default function AdminSettingsPage() {
   const [activeTab, setActiveTab] = useState('books');
   const [searchParams] = useState(new URLSearchParams());
   const initialTab = searchParams.get('tab') || 'books';
-  const [selectedBook, setSelectedBook] = useState<Book | null>(null);
-  const [selectedAuthor, setSelectedAuthor] = useState<Author | null>(null);
+  const [selectedBook, setSelectedBook] = useState<BookWithAdmin | null>(null);
+  const [selectedAuthor, setSelectedAuthor] = useState<AuthorWithAdmin | null>(null);
   const [isBookModalOpen, setIsBookModalOpen] = useState(false);
   const [isAuthorModalOpen, setIsAuthorModalOpen] = useState(false);
   const [isCouponModalOpen, setIsCouponModalOpen] = useState(false);
@@ -129,7 +127,10 @@ export default function AdminSettingsPage() {
     {
       accessorKey: 'author',
       header: 'Author',
-      cell: ({ row }: any) => <span>{row.getValue('author')}</span>,
+      cell: ({ row }: any) => {
+        const author = row.original.author;
+        return <span>{author?.name || 'Unknown'}</span>;
+      },
     },
     {
       accessorKey: 'isbn',
@@ -139,16 +140,32 @@ export default function AdminSettingsPage() {
     {
       accessorKey: 'price',
       header: 'Price',
-      cell: ({ row }: any) => <span className="font-medium">${row.getValue('price').toFixed(2)}</span>,
+      cell: ({ row }: any) => {
+        const book = row.original;
+        const hasDiscount = book.originalPrice && book.discountPercentage;
+        return (
+          <div className="flex items-center gap-2">
+            <span className="font-medium">${book.price.toFixed(2)}</span>
+            {hasDiscount && (
+              <span className="text-sm text-muted-foreground line-through">
+                ${book.originalPrice.toFixed(2)}
+              </span>
+            )}
+          </div>
+        );
+      },
     },
     {
       accessorKey: 'stock',
       header: 'Stock',
-      cell: ({ row }: any) => (
-        <span className={cn(row.getValue('stock') === 0 ? 'text-red-500' : '')}>
-          {row.getValue('stock')}
-        </span>
-      ),
+      cell: ({ row }: any) => {
+        const stock = row.original.stock ?? 0;
+        return (
+          <span className={cn(stock === 0 ? 'text-red-500' : '')}>
+            {stock}
+          </span>
+        );
+      },
     },
     {
       accessorKey: 'rating',
@@ -164,13 +181,17 @@ export default function AdminSettingsPage() {
       accessorKey: 'status',
       header: 'Status',
       cell: ({ row }: any) => {
-        const status = row.getValue('status');
+        const status = row.original.status;
         const variants: Record<string, string> = {
           active: 'bg-green-100 text-green-800',
           inactive: 'bg-gray-100 text-gray-800',
           out_of_stock: 'bg-red-100 text-red-800',
         };
-        return <Badge className={cn('capitalize', variants[status])}>{status.replace('_', ' ')}</Badge>;
+        return status ? (
+          <Badge className={cn('capitalize', variants[status])}>{status.replace('_', ' ')}</Badge>
+        ) : (
+          <Badge className="bg-green-100 text-green-800">Active</Badge>
+        );
       },
     },
   ];
@@ -180,28 +201,41 @@ export default function AdminSettingsPage() {
     {
       accessorKey: 'name',
       header: 'Name',
-      cell: ({ row }: any) => <span className="font-medium">{row.getValue('name')}</span>,
+      cell: ({ row }: any) => (
+        <div className="flex items-center gap-3">
+          <img
+            src={row.original.avatar}
+            alt={row.getValue('name')}
+            className="h-10 w-10 rounded-full object-cover"
+          />
+          <span className="font-medium">{row.getValue('name')}</span>
+        </div>
+      ),
     },
     {
       accessorKey: 'nationality',
       header: 'Nationality',
-      cell: ({ row }: any) => <span>{row.getValue('nationality')}</span>,
+      cell: ({ row }: any) => <span>{row.original.nationality ?? 'International'}</span>,
     },
     {
       accessorKey: 'bookCount',
       header: 'Books',
-      cell: ({ row }: any) => <span className="font-medium">{row.getValue('bookCount')}</span>,
+      cell: ({ row }: any) => <span className="font-medium">{row.original.bookCount ?? 0}</span>,
     },
     {
       accessorKey: 'status',
       header: 'Status',
       cell: ({ row }: any) => {
-        const status = row.getValue('status');
+        const status = row.original.status;
         const variants: Record<string, string> = {
           active: 'bg-green-100 text-green-800',
           inactive: 'bg-gray-100 text-gray-800',
         };
-        return <Badge className={cn(variants[status])}>{status}</Badge>;
+        return status ? (
+          <Badge className={cn(variants[status])}>{status}</Badge>
+        ) : (
+          <Badge className="bg-green-100 text-green-800">Active</Badge>
+        );
       },
     },
   ];
@@ -324,14 +358,14 @@ export default function AdminSettingsPage() {
               <CardContent>
                 <AdminDataTable
                   columns={bookColumns}
-                  data={mockBooks}
+                  data={adminBooks}
                   searchable={true}
                   searchPlaceholder="Search by title, author, or ISBN..."
                   selectable={true}
                   pagination={true}
                   pageSize={10}
                   onRowClick={(book) => {
-                    setSelectedBook(book as Book);
+                    setSelectedBook(book as BookWithAdmin);
                     setIsBookModalOpen(true);
                   }}
                 />
@@ -357,14 +391,14 @@ export default function AdminSettingsPage() {
               <CardContent>
                 <AdminDataTable
                   columns={authorColumns}
-                  data={mockAuthors}
+                  data={adminAuthors}
                   searchable={true}
                   searchPlaceholder="Search authors..."
                   selectable={true}
                   pagination={true}
                   pageSize={10}
                   onRowClick={(author) => {
-                    setSelectedAuthor(author as Author);
+                    setSelectedAuthor(author as AuthorWithAdmin);
                     setIsAuthorModalOpen(true);
                   }}
                 />
@@ -480,7 +514,7 @@ export default function AdminSettingsPage() {
                       <SelectValue placeholder="Choose a book..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {mockBooks.map((book) => (
+                      {adminBooks.map((book) => (
                         <SelectItem key={book.id} value={book.id}>{book.title}</SelectItem>
                       ))}
                     </SelectContent>
@@ -534,7 +568,7 @@ export default function AdminSettingsPage() {
                       <SelectValue placeholder="Choose an author..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {mockAuthors.map((author) => (
+                      {adminAuthors.map((author) => (
                         <SelectItem key={author.id} value={author.id}>{author.name}</SelectItem>
                       ))}
                     </SelectContent>
@@ -664,7 +698,20 @@ export default function AdminSettingsPage() {
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="book-author">Author</Label>
-                <Input id="book-author" defaultValue={selectedBook?.author} />
+                <Select defaultValue={selectedBook?.author?.id}>
+                  <SelectTrigger id="book-author">
+                    <SelectValue placeholder="Select an author" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {adminAuthors.map((author) => (
+                      <SelectItem key={author.id} value={author.id}>{author.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="book-cover">Cover Image URL</Label>
+                <Input id="book-cover" defaultValue={selectedBook?.coverImage} placeholder="https://..." />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
@@ -674,6 +721,30 @@ export default function AdminSettingsPage() {
                 <div className="grid gap-2">
                   <Label htmlFor="book-price">Price</Label>
                   <Input id="book-price" type="number" step="0.01" defaultValue={selectedBook?.price} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="book-original-price">Original Price</Label>
+                  <Input id="book-original-price" type="number" step="0.01" defaultValue={selectedBook?.originalPrice} placeholder="For discounted books" />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="book-discount">Discount %</Label>
+                  <Input id="book-discount" type="number" defaultValue={selectedBook?.discountPercentage} placeholder="30" />
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="book-pages">Pages</Label>
+                  <Input id="book-pages" type="number" defaultValue={selectedBook?.pages} />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="book-language">Language</Label>
+                  <Input id="book-language" defaultValue={selectedBook?.language || 'English'} />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="book-publisher">Publisher</Label>
+                  <Input id="book-publisher" defaultValue={selectedBook?.publisher} />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -696,8 +767,19 @@ export default function AdminSettingsPage() {
                 </div>
               </div>
               <div className="grid gap-2">
+                <Label htmlFor="book-categories">Categories</Label>
+                <div className="flex flex-wrap gap-2">
+                  {mockCategories.map((cat) => (
+                    <label key={cat.id} className="flex items-center gap-2 text-sm">
+                      <Checkbox id={`cat-${cat.id}`} defaultChecked={selectedBook?.categories.some(c => c.id === cat.id)} />
+                      {cat.icon} {cat.name}
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div className="grid gap-2">
                 <Label htmlFor="book-description">Description</Label>
-                <Textarea id="book-description" placeholder="Book description..." />
+                <Textarea id="book-description" defaultValue={selectedBook?.description} placeholder="Book description..." />
               </div>
             </div>
             <DialogFooter>
@@ -725,12 +807,30 @@ export default function AdminSettingsPage() {
                 <Input id="author-name" defaultValue={selectedAuthor?.name} />
               </div>
               <div className="grid gap-2">
+                <Label htmlFor="author-avatar">Avatar URL</Label>
+                <Input id="author-avatar" defaultValue={selectedAuthor?.avatar} placeholder="https://..." />
+              </div>
+              <div className="grid gap-2">
                 <Label htmlFor="author-nationality">Nationality</Label>
                 <Input id="author-nationality" defaultValue={selectedAuthor?.nationality} />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="author-bio">Bio</Label>
-                <Textarea id="author-bio" placeholder="Author biography..." />
+                <Textarea id="author-bio" defaultValue={selectedAuthor?.bio} placeholder="Author biography..." />
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="author-website">Website</Label>
+                  <Input id="author-website" defaultValue={selectedAuthor?.socialLinks?.website} placeholder="https://..." />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="author-twitter">Twitter</Label>
+                  <Input id="author-twitter" defaultValue={selectedAuthor?.socialLinks?.twitter} placeholder="@username" />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="author-instagram">Instagram</Label>
+                  <Input id="author-instagram" defaultValue={selectedAuthor?.socialLinks?.instagram} placeholder="@username" />
+                </div>
               </div>
             </div>
             <DialogFooter>
