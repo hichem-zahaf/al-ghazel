@@ -6,7 +6,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { X, Heart, X as XIcon, Info, Star, BookOpen, Tag, DollarSign } from 'lucide-react';
+import { X, Heart, X as XIcon, Info, Star, BookOpen, Tag, DollarSign, Percent } from 'lucide-react';
 import { cn } from '@kit/ui/utils';
 import { Button } from '@kit/ui/button';
 import { Badge } from '@kit/ui/badge';
@@ -35,6 +35,7 @@ export function BookDiscoveryModal({ books, isOpen, onClose }: BookDiscoveryModa
   const cardRef = useRef<HTMLDivElement>(null);
 
   const currentBook = books[currentIndex];
+  const hasDiscount = currentBook?.originalPrice && currentBook.originalPrice > currentBook.price;
 
   // Reset state when modal opens/closes
   useEffect(() => {
@@ -239,6 +240,14 @@ export function BookDiscoveryModal({ books, isOpen, onClose }: BookDiscoveryModa
               <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/80" />
             </div>
 
+            {/* Discount badge */}
+            {hasDiscount && (
+              <Badge className="absolute top-4 left-4 bg-red-500 text-white border-0">
+                <Percent className="w-3 h-3 mr-1" />
+                -{currentBook.discountPercentage}%
+              </Badge>
+            )}
+
             {/* LIKE/NOPE stamps */}
             <div
               className={cn(
@@ -287,9 +296,20 @@ export function BookDiscoveryModal({ books, isOpen, onClose }: BookDiscoveryModa
                   <Star className="w-4 h-4 fill-yellow-400 text-yellow-400 mr-1" />
                   <span className="font-semibold">{currentBook.rating}</span>
                 </div>
-                <Badge className="bg-orange text-white border-0">
-                  ${currentBook.price.toFixed(2)}
-                </Badge>
+                {hasDiscount ? (
+                  <div className="flex items-center gap-1">
+                    <Badge className="bg-orange text-white border-0">
+                      ${currentBook.price.toFixed(2)}
+                    </Badge>
+                    <span className="text-sm text-white/60 line-through">
+                      ${currentBook.originalPrice?.toFixed(2)}
+                    </span>
+                  </div>
+                ) : (
+                  <Badge className="bg-orange text-white border-0">
+                    ${currentBook.price.toFixed(2)}
+                  </Badge>
+                )}
               </div>
 
               {/* Expanded info panel (like Tinder bio) */}

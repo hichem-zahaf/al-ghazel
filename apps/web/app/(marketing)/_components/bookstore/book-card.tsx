@@ -8,7 +8,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Star, ShoppingCart } from 'lucide-react';
+import { Star, ShoppingCart, Percent } from 'lucide-react';
 import { cn } from '@kit/ui/utils';
 import { Button } from '@kit/ui/button';
 import { Badge } from '@kit/ui/badge';
@@ -39,6 +39,7 @@ export function BookCard({
   onAddToCart
 }: BookCardProps) {
   const [isHovered, setIsHovered] = useState(false);
+  const hasDiscount = book.originalPrice && book.originalPrice > book.price;
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -70,6 +71,11 @@ export function BookCard({
               loading="lazy"
             />
           </div>
+          {hasDiscount && (
+            <Badge className="absolute top-2 left-2 bg-red-500 text-white text-xs">
+              -{book.discountPercentage}%
+            </Badge>
+          )}
           <div className={cn(
             'absolute inset-0 bg-gradient-to-t from-black/60 to-transparent transition-opacity duration-200',
             isHovered ? 'opacity-100' : 'opacity-0'
@@ -93,7 +99,14 @@ export function BookCard({
             {book.author.name}
           </p>
           <div className="flex items-center gap-2 mt-2">
-            <span className="font-bold text-orange">${book.price.toFixed(2)}</span>
+            <div className="flex items-baseline gap-1">
+              <span className="font-bold text-orange">${book.price.toFixed(2)}</span>
+              {hasDiscount && (
+                <span className="text-xs text-muted-foreground line-through">
+                  ${book.originalPrice?.toFixed(2)}
+                </span>
+              )}
+            </div>
             <div className="flex items-center gap-1">
               <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
               <span className="text-xs text-muted-foreground">{book.rating}</span>
@@ -131,8 +144,15 @@ export function BookCard({
             'absolute inset-0 bg-gradient-to-t from-black/20 to-transparent transition-opacity duration-300',
             isHovered ? 'opacity-100' : 'opacity-0'
           )} />
+          {hasDiscount && (
+            <Badge className="absolute top-2 left-2 bg-red-500 text-white">
+              <Percent className="w-3 h-3 mr-1" />
+              -{book.discountPercentage}%
+            </Badge>
+          )}
           <Badge className={cn(
             'absolute top-2 right-2 bg-orange text-white transition-transform duration-300',
+            hasDiscount && 'top-10',
             isHovered && 'scale-110'
           )}>
             ${book.price.toFixed(2)}
@@ -152,6 +172,17 @@ export function BookCard({
               ({generateReviewCount(book.id)})
             </span>
           </div>
+          {hasDiscount && (
+            <div className="flex items-baseline gap-2 mb-3">
+              <span className="text-lg font-bold text-orange">${book.price.toFixed(2)}</span>
+              <span className="text-sm text-muted-foreground line-through">
+                ${book.originalPrice?.toFixed(2)}
+              </span>
+              <span className="text-xs text-red-500 font-semibold">
+                Save {book.discountPercentage}%
+              </span>
+            </div>
+          )}
           <div className="flex flex-wrap gap-1 mb-3">
             {book.categories.slice(0, 2).map((category: { id: string; name: string }) => (
               <Badge

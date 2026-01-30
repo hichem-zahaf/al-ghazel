@@ -9,6 +9,8 @@ export interface Book {
   author: Author;
   coverImage: string;
   price: number;
+  originalPrice?: number;
+  discountPercentage?: number;
   description: string;
   categories: Category[];
   rating: number;

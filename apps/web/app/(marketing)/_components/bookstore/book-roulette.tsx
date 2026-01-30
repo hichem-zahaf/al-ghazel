@@ -6,9 +6,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Sparkles, X } from 'lucide-react';
+import { Sparkles, X, Percent } from 'lucide-react';
 import { cn } from '@kit/ui/utils';
 import { Button } from '@kit/ui/button';
+import { Badge } from '@kit/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -238,6 +239,12 @@ export function BookRoulette({ books, className }: BookRouletteProps) {
                     className="rounded-lg object-cover shadow-lg"
                     sizes="160px"
                   />
+                  {selectedBook.originalPrice && selectedBook.originalPrice > selectedBook.price && (
+                    <Badge className="absolute top-2 left-2 bg-red-500 text-white border-0">
+                      <Percent className="w-3 h-3 mr-1" />
+                      -{selectedBook.discountPercentage}%
+                    </Badge>
+                  )}
                 </div>
 
                 {/* Book Details */}
@@ -250,15 +257,30 @@ export function BookRoulette({ books, className }: BookRouletteProps) {
                   </p>
 
                   <div className="flex items-center gap-3 mb-4">
-                    <span className="text-2xl font-bold text-orange">
-                      ${selectedBook.price.toFixed(2)}
-                    </span>
-                    <div className="flex items-center gap-1">
-                      <span className="text-yellow-500">★★★★★</span>
-                      <span className="text-sm text-muted-foreground">
-                        {selectedBook.rating}
+                    {selectedBook.originalPrice && selectedBook.originalPrice > selectedBook.price ? (
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-2xl font-bold text-orange">
+                          ${selectedBook.price.toFixed(2)}
+                        </span>
+                        <span className="text-sm text-muted-foreground line-through">
+                          ${selectedBook.originalPrice.toFixed(2)}
+                        </span>
+                        <Badge className="bg-red-500 text-white border-0">
+                          Save {selectedBook.discountPercentage}%
+                        </Badge>
+                      </div>
+                    ) : (
+                      <span className="text-2xl font-bold text-orange">
+                        ${selectedBook.price.toFixed(2)}
                       </span>
-                    </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1 mb-4">
+                    <span className="text-yellow-500">★★★★★</span>
+                    <span className="text-sm text-muted-foreground">
+                      {selectedBook.rating}
+                    </span>
                   </div>
 
                   <p className="text-sm text-muted-foreground line-clamp-3 mb-4">

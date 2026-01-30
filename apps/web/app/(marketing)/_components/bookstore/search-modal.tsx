@@ -6,10 +6,11 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Search, X } from 'lucide-react';
+import { Search, X, Percent } from 'lucide-react';
 import { cn } from '@kit/ui/utils';
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
+import { Badge } from '@kit/ui/badge';
 import { BookCard } from './book-card';
 import type { Book, Category, Author } from '../../../../types/bookstore';
 
@@ -192,6 +193,11 @@ export function SearchModal({
                             alt={book.title}
                             className="w-full h-full object-cover"
                           />
+                          {book.originalPrice && book.originalPrice > book.price && (
+                            <Badge className="absolute top-1 left-1 bg-red-500 text-white text-[10px] px-1 py-0 border-0">
+                              -{book.discountPercentage}%
+                            </Badge>
+                          )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <h4 className="font-semibold text-black dark:text-white line-clamp-1 mb-1">
@@ -201,9 +207,20 @@ export function SearchModal({
                             {book.author.name}
                           </p>
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-bold text-orange text-sm">
-                              ${book.price.toFixed(2)}
-                            </span>
+                            {book.originalPrice && book.originalPrice > book.price ? (
+                              <div className="flex items-baseline gap-1">
+                                <span className="font-bold text-orange text-sm">
+                                  ${book.price.toFixed(2)}
+                                </span>
+                                <span className="text-xs text-muted-foreground line-through">
+                                  ${book.originalPrice.toFixed(2)}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="font-bold text-orange text-sm">
+                                ${book.price.toFixed(2)}
+                              </span>
+                            )}
                             {book.categories.slice(0, 2).map((category) => (
                               <span
                                 key={category.id}

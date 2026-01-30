@@ -7,7 +7,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { Star, BookOpen } from 'lucide-react';
+import { Star, BookOpen, Percent } from 'lucide-react';
 import { Button } from '@kit/ui/button';
 import { Badge } from '@kit/ui/badge';
 import { cn } from '@kit/ui/utils';
@@ -20,6 +20,7 @@ interface BookOfTheDayProps {
 
 export function BookOfTheDay({ featured, className }: BookOfTheDayProps) {
   const { book, reason, quote } = featured;
+  const hasDiscount = book.originalPrice && book.originalPrice > book.price;
 
   return (
     <section
@@ -68,9 +69,24 @@ export function BookOfTheDay({ featured, className }: BookOfTheDayProps) {
                 <span className="text-white/70">|</span>
                 <span className="text-white/90">{book.pages} pages</span>
                 <span className="text-white/70">|</span>
-                <span className="font-semibold text-2xl">
-                  ${book.price.toFixed(2)}
-                </span>
+                {hasDiscount ? (
+                  <div className="flex items-baseline gap-2">
+                    <span className="font-semibold text-2xl">
+                      ${book.price.toFixed(2)}
+                    </span>
+                    <span className="text-lg text-white/60 line-through">
+                      ${book.originalPrice?.toFixed(2)}
+                    </span>
+                    <Badge className="bg-red-500 text-white border-0">
+                      <Percent className="w-3 h-3 mr-1" />
+                      -{book.discountPercentage}%
+                    </Badge>
+                  </div>
+                ) : (
+                  <span className="font-semibold text-2xl">
+                    ${book.price.toFixed(2)}
+                  </span>
+                )}
               </div>
             </div>
 
