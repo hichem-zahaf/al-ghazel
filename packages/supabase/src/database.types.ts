@@ -4,496 +4,1504 @@ export type Json =
   | boolean
   | null
   | { [key: string]: Json | undefined }
-  | Json[];
+  | Json[]
 
 export type Database = {
   graphql_public: {
     Tables: {
-      [_ in never]: never;
-    };
+      [_ in never]: never
+    }
     Views: {
-      [_ in never]: never;
-    };
+      [_ in never]: never
+    }
     Functions: {
       graphql: {
         Args: {
-          operationName?: string;
-          query?: string;
-          variables?: Json;
-          extensions?: Json;
-        };
-        Returns: Json;
-      };
-    };
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
     Enums: {
-      [_ in never]: never;
-    };
+      [_ in never]: never
+    }
     CompositeTypes: {
-      [_ in never]: never;
-    };
-  };
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       accounts: {
         Row: {
-          created_at: string | null;
-          created_by: string | null;
-          email: string | null;
-          id: string;
-          name: string;
-          picture_url: string | null;
-          public_data: Json;
-          updated_at: string | null;
-          updated_by: string | null;
-        };
+          created_at: string | null
+          created_by: string | null
+          email: string | null
+          id: string
+          name: string
+          picture_url: string | null
+          public_data: Json
+          updated_at: string | null
+          updated_by: string | null
+        }
         Insert: {
-          created_at?: string | null;
-          created_by?: string | null;
-          email?: string | null;
-          id?: string;
-          name: string;
-          picture_url?: string | null;
-          public_data?: Json;
-          updated_at?: string | null;
-          updated_by?: string | null;
-        };
+          created_at?: string | null
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          name: string
+          picture_url?: string | null
+          public_data?: Json
+          updated_at?: string | null
+          updated_by?: string | null
+        }
         Update: {
-          created_at?: string | null;
-          created_by?: string | null;
-          email?: string | null;
-          id?: string;
-          name?: string;
-          picture_url?: string | null;
-          public_data?: Json;
-          updated_at?: string | null;
-          updated_by?: string | null;
-        };
-        Relationships: [];
-      };
-    };
+          created_at?: string | null
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          picture_url?: string | null
+          public_data?: Json
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      author_of_the_day: {
+        Row: {
+          author_id: string
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          display_order: number | null
+          featured_date: string
+          id: string
+        }
+        Insert: {
+          author_id: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          display_order?: number | null
+          featured_date: string
+          id?: string
+        }
+        Update: {
+          author_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          display_order?: number | null
+          featured_date?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "author_of_the_day_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "authors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      authors: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          birth_date: string | null
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_featured: boolean | null
+          metadata: Json
+          name: string
+          nationality: string | null
+          updated_at: string | null
+          updated_by: string | null
+          website_url: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          birth_date?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_featured?: boolean | null
+          metadata?: Json
+          name: string
+          nationality?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+          website_url?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          birth_date?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_featured?: boolean | null
+          metadata?: Json
+          name?: string
+          nationality?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+          website_url?: string | null
+        }
+        Relationships: []
+      }
+      book_categories: {
+        Row: {
+          book_id: string
+          category_id: string
+          created_at: string | null
+        }
+        Insert: {
+          book_id: string
+          category_id: string
+          created_at?: string | null
+        }
+        Update: {
+          book_id?: string
+          category_id?: string
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "book_categories_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "books"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "book_categories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      book_of_the_day: {
+        Row: {
+          book_id: string
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          display_order: number | null
+          featured_date: string
+          id: string
+        }
+        Insert: {
+          book_id: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          display_order?: number | null
+          featured_date: string
+          id?: string
+        }
+        Update: {
+          book_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          display_order?: number | null
+          featured_date?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "book_of_the_day_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "books"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      books: {
+        Row: {
+          author_id: string
+          cover_image_url: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          discount_percentage: number | null
+          format: string | null
+          id: string
+          is_bestseller: boolean | null
+          is_featured: boolean | null
+          is_new_release: boolean | null
+          isbn: string | null
+          language: string | null
+          metadata: Json
+          original_price: number | null
+          pages: number | null
+          price: number
+          published_date: string | null
+          publisher: string | null
+          rating: number | null
+          rating_count: number | null
+          stock_quantity: number | null
+          subtitle: string | null
+          title: string
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          author_id: string
+          cover_image_url?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          discount_percentage?: number | null
+          format?: string | null
+          id?: string
+          is_bestseller?: boolean | null
+          is_featured?: boolean | null
+          is_new_release?: boolean | null
+          isbn?: string | null
+          language?: string | null
+          metadata?: Json
+          original_price?: number | null
+          pages?: number | null
+          price: number
+          published_date?: string | null
+          publisher?: string | null
+          rating?: number | null
+          rating_count?: number | null
+          stock_quantity?: number | null
+          subtitle?: string | null
+          title: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          author_id?: string
+          cover_image_url?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          discount_percentage?: number | null
+          format?: string | null
+          id?: string
+          is_bestseller?: boolean | null
+          is_featured?: boolean | null
+          is_new_release?: boolean | null
+          isbn?: string | null
+          language?: string | null
+          metadata?: Json
+          original_price?: number | null
+          pages?: number | null
+          price?: number
+          published_date?: string | null
+          publisher?: string | null
+          rating?: number | null
+          rating_count?: number | null
+          stock_quantity?: number | null
+          subtitle?: string | null
+          title?: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "books_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "authors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      categories: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          display_order: number | null
+          icon: string | null
+          id: string
+          name: string
+          parent_id: string | null
+          slug: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          icon?: string | null
+          id?: string
+          name: string
+          parent_id?: string | null
+          slug: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          icon?: string | null
+          id?: string
+          name?: string
+          parent_id?: string | null
+          slug?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coupons: {
+        Row: {
+          code: string
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          discount_type: Database["public"]["Enums"]["discount_type"]
+          discount_value: number
+          id: string
+          is_active: boolean | null
+          max_discount_amount: number | null
+          metadata: Json
+          min_purchase_amount: number | null
+          updated_at: string | null
+          updated_by: string | null
+          usage_limit: number | null
+          used_count: number | null
+          valid_from: string
+          valid_until: string
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          discount_type: Database["public"]["Enums"]["discount_type"]
+          discount_value: number
+          id?: string
+          is_active?: boolean | null
+          max_discount_amount?: number | null
+          metadata?: Json
+          min_purchase_amount?: number | null
+          updated_at?: string | null
+          updated_by?: string | null
+          usage_limit?: number | null
+          used_count?: number | null
+          valid_from: string
+          valid_until: string
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          discount_type?: Database["public"]["Enums"]["discount_type"]
+          discount_value?: number
+          id?: string
+          is_active?: boolean | null
+          max_discount_amount?: number | null
+          metadata?: Json
+          min_purchase_amount?: number | null
+          updated_at?: string | null
+          updated_by?: string | null
+          usage_limit?: number | null
+          used_count?: number | null
+          valid_from?: string
+          valid_until?: string
+        }
+        Relationships: []
+      }
+      order_items: {
+        Row: {
+          book_id: string
+          created_at: string | null
+          discount_amount: number | null
+          id: string
+          order_id: string
+          quantity: number
+          total_price: number
+          unit_price: number
+        }
+        Insert: {
+          book_id: string
+          created_at?: string | null
+          discount_amount?: number | null
+          id?: string
+          order_id: string
+          quantity?: number
+          total_price: number
+          unit_price: number
+        }
+        Update: {
+          book_id?: string
+          created_at?: string | null
+          discount_amount?: number | null
+          id?: string
+          order_id?: string
+          quantity?: number
+          total_price?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_items_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "books"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          account_id: string
+          actual_delivery_date: string | null
+          admin_notes: string | null
+          carrier: string | null
+          coupon_code: string | null
+          created_at: string | null
+          created_by: string | null
+          currency: string | null
+          customer_notes: string | null
+          delivery_status: Database["public"]["Enums"]["delivery_status"] | null
+          discount_amount: number | null
+          estimated_delivery_date: string | null
+          id: string
+          order_number: string
+          payment_id: string | null
+          payment_method: string | null
+          payment_status: Database["public"]["Enums"]["payment_status"] | null
+          shipping_address_line1: string
+          shipping_address_line2: string | null
+          shipping_amount: number | null
+          shipping_city: string
+          shipping_country: string | null
+          shipping_email: string
+          shipping_name: string
+          shipping_phone: string | null
+          shipping_postal_code: string
+          shipping_state: string | null
+          status: Database["public"]["Enums"]["order_status"] | null
+          subtotal: number
+          tax_amount: number | null
+          total: number
+          tracking_number: string | null
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          account_id: string
+          actual_delivery_date?: string | null
+          admin_notes?: string | null
+          carrier?: string | null
+          coupon_code?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          currency?: string | null
+          customer_notes?: string | null
+          delivery_status?:
+            | Database["public"]["Enums"]["delivery_status"]
+            | null
+          discount_amount?: number | null
+          estimated_delivery_date?: string | null
+          id?: string
+          order_number: string
+          payment_id?: string | null
+          payment_method?: string | null
+          payment_status?: Database["public"]["Enums"]["payment_status"] | null
+          shipping_address_line1: string
+          shipping_address_line2?: string | null
+          shipping_amount?: number | null
+          shipping_city: string
+          shipping_country?: string | null
+          shipping_email: string
+          shipping_name: string
+          shipping_phone?: string | null
+          shipping_postal_code: string
+          shipping_state?: string | null
+          status?: Database["public"]["Enums"]["order_status"] | null
+          subtotal: number
+          tax_amount?: number | null
+          total: number
+          tracking_number?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          account_id?: string
+          actual_delivery_date?: string | null
+          admin_notes?: string | null
+          carrier?: string | null
+          coupon_code?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          currency?: string | null
+          customer_notes?: string | null
+          delivery_status?:
+            | Database["public"]["Enums"]["delivery_status"]
+            | null
+          discount_amount?: number | null
+          estimated_delivery_date?: string | null
+          id?: string
+          order_number?: string
+          payment_id?: string | null
+          payment_method?: string | null
+          payment_status?: Database["public"]["Enums"]["payment_status"] | null
+          shipping_address_line1?: string
+          shipping_address_line2?: string | null
+          shipping_amount?: number | null
+          shipping_city?: string
+          shipping_country?: string | null
+          shipping_email?: string
+          shipping_name?: string
+          shipping_phone?: string | null
+          shipping_postal_code?: string
+          shipping_state?: string | null
+          status?: Database["public"]["Enums"]["order_status"] | null
+          subtotal?: number
+          tax_amount?: number | null
+          total?: number
+          tracking_number?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recommendation_settings: {
+        Row: {
+          description: string | null
+          id: string
+          key: string
+          updated_at: string | null
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          description?: string | null
+          id?: string
+          key: string
+          updated_at?: string | null
+          updated_by?: string | null
+          value: Json
+        }
+        Update: {
+          description?: string | null
+          id?: string
+          key?: string
+          updated_at?: string | null
+          updated_by?: string | null
+          value?: Json
+        }
+        Relationships: []
+      }
+      user_reviews: {
+        Row: {
+          account_id: string
+          book_id: string
+          created_at: string | null
+          helpful_count: number | null
+          id: string
+          is_verified_purchase: boolean | null
+          rating: number
+          review: string | null
+          title: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          account_id: string
+          book_id: string
+          created_at?: string | null
+          helpful_count?: number | null
+          id?: string
+          is_verified_purchase?: boolean | null
+          rating: number
+          review?: string | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          account_id?: string
+          book_id?: string
+          created_at?: string | null
+          helpful_count?: number | null
+          id?: string
+          is_verified_purchase?: boolean | null
+          rating?: number
+          review?: string | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_reviews_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_reviews_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "books"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_sessions: {
+        Row: {
+          account_id: string
+          duration_seconds: number | null
+          id: string
+          ip_address: unknown | null
+          metadata: Json
+          page_views: number | null
+          referrer: string | null
+          session_end: string | null
+          session_start: string
+          user_agent: string | null
+        }
+        Insert: {
+          account_id: string
+          duration_seconds?: number | null
+          id?: string
+          ip_address?: unknown | null
+          metadata?: Json
+          page_views?: number | null
+          referrer?: string | null
+          session_end?: string | null
+          session_start?: string
+          user_agent?: string | null
+        }
+        Update: {
+          account_id?: string
+          duration_seconds?: number | null
+          id?: string
+          ip_address?: unknown | null
+          metadata?: Json
+          page_views?: number | null
+          referrer?: string | null
+          session_end?: string | null
+          session_start?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_sessions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_wishlist: {
+        Row: {
+          account_id: string
+          book_id: string
+          created_at: string | null
+          id: string
+        }
+        Insert: {
+          account_id: string
+          book_id: string
+          created_at?: string | null
+          id?: string
+        }
+        Update: {
+          account_id?: string
+          book_id?: string
+          created_at?: string | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_wishlist_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_wishlist_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "books"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+    }
     Views: {
-      [_ in never]: never;
-    };
+      [_ in never]: never
+    }
     Functions: {
-      [_ in never]: never;
-    };
+      gtrgm_compress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gtrgm_decompress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gtrgm_in: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gtrgm_options: {
+        Args: { "": unknown }
+        Returns: undefined
+      }
+      gtrgm_out: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      set_limit: {
+        Args: { "": number }
+        Returns: number
+      }
+      show_limit: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      show_trgm: {
+        Args: { "": string }
+        Returns: string[]
+      }
+    }
     Enums: {
-      [_ in never]: never;
-    };
+      delivery_status:
+        | "preparing"
+        | "in_transit"
+        | "out_for_delivery"
+        | "delivered"
+        | "failed"
+        | "returned"
+      discount_type: "percentage" | "fixed" | "buy_x_get_y"
+      order_status:
+        | "pending"
+        | "processing"
+        | "shipped"
+        | "delivered"
+        | "cancelled"
+        | "refunded"
+      payment_status: "pending" | "completed" | "failed" | "refunded"
+    }
     CompositeTypes: {
-      [_ in never]: never;
-    };
-  };
+      [_ in never]: never
+    }
+  }
   storage: {
     Tables: {
       buckets: {
         Row: {
-          allowed_mime_types: string[] | null;
-          avif_autodetection: boolean | null;
-          created_at: string | null;
-          file_size_limit: number | null;
-          id: string;
-          name: string;
-          owner: string | null;
-          owner_id: string | null;
-          public: boolean | null;
-          updated_at: string | null;
-        };
+          allowed_mime_types: string[] | null
+          avif_autodetection: boolean | null
+          created_at: string | null
+          file_size_limit: number | null
+          id: string
+          name: string
+          owner: string | null
+          owner_id: string | null
+          public: boolean | null
+          type: Database["storage"]["Enums"]["buckettype"]
+          updated_at: string | null
+        }
         Insert: {
-          allowed_mime_types?: string[] | null;
-          avif_autodetection?: boolean | null;
-          created_at?: string | null;
-          file_size_limit?: number | null;
-          id: string;
-          name: string;
-          owner?: string | null;
-          owner_id?: string | null;
-          public?: boolean | null;
-          updated_at?: string | null;
-        };
+          allowed_mime_types?: string[] | null
+          avif_autodetection?: boolean | null
+          created_at?: string | null
+          file_size_limit?: number | null
+          id: string
+          name: string
+          owner?: string | null
+          owner_id?: string | null
+          public?: boolean | null
+          type?: Database["storage"]["Enums"]["buckettype"]
+          updated_at?: string | null
+        }
         Update: {
-          allowed_mime_types?: string[] | null;
-          avif_autodetection?: boolean | null;
-          created_at?: string | null;
-          file_size_limit?: number | null;
-          id?: string;
-          name?: string;
-          owner?: string | null;
-          owner_id?: string | null;
-          public?: boolean | null;
-          updated_at?: string | null;
-        };
-        Relationships: [];
-      };
+          allowed_mime_types?: string[] | null
+          avif_autodetection?: boolean | null
+          created_at?: string | null
+          file_size_limit?: number | null
+          id?: string
+          name?: string
+          owner?: string | null
+          owner_id?: string | null
+          public?: boolean | null
+          type?: Database["storage"]["Enums"]["buckettype"]
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      buckets_analytics: {
+        Row: {
+          created_at: string
+          format: string
+          id: string
+          type: Database["storage"]["Enums"]["buckettype"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          format?: string
+          id: string
+          type?: Database["storage"]["Enums"]["buckettype"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          format?: string
+          id?: string
+          type?: Database["storage"]["Enums"]["buckettype"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      iceberg_namespaces: {
+        Row: {
+          bucket_id: string
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          bucket_id: string
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          bucket_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "iceberg_namespaces_bucket_id_fkey"
+            columns: ["bucket_id"]
+            isOneToOne: false
+            referencedRelation: "buckets_analytics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      iceberg_tables: {
+        Row: {
+          bucket_id: string
+          created_at: string
+          id: string
+          location: string
+          name: string
+          namespace_id: string
+          updated_at: string
+        }
+        Insert: {
+          bucket_id: string
+          created_at?: string
+          id?: string
+          location: string
+          name: string
+          namespace_id: string
+          updated_at?: string
+        }
+        Update: {
+          bucket_id?: string
+          created_at?: string
+          id?: string
+          location?: string
+          name?: string
+          namespace_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "iceberg_tables_bucket_id_fkey"
+            columns: ["bucket_id"]
+            isOneToOne: false
+            referencedRelation: "buckets_analytics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "iceberg_tables_namespace_id_fkey"
+            columns: ["namespace_id"]
+            isOneToOne: false
+            referencedRelation: "iceberg_namespaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       migrations: {
         Row: {
-          executed_at: string | null;
-          hash: string;
-          id: number;
-          name: string;
-        };
+          executed_at: string | null
+          hash: string
+          id: number
+          name: string
+        }
         Insert: {
-          executed_at?: string | null;
-          hash: string;
-          id: number;
-          name: string;
-        };
+          executed_at?: string | null
+          hash: string
+          id: number
+          name: string
+        }
         Update: {
-          executed_at?: string | null;
-          hash?: string;
-          id?: number;
-          name?: string;
-        };
-        Relationships: [];
-      };
+          executed_at?: string | null
+          hash?: string
+          id?: number
+          name?: string
+        }
+        Relationships: []
+      }
       objects: {
         Row: {
-          bucket_id: string | null;
-          created_at: string | null;
-          id: string;
-          last_accessed_at: string | null;
-          metadata: Json | null;
-          name: string | null;
-          owner: string | null;
-          owner_id: string | null;
-          path_tokens: string[] | null;
-          updated_at: string | null;
-          user_metadata: Json | null;
-          version: string | null;
-        };
+          bucket_id: string | null
+          created_at: string | null
+          id: string
+          last_accessed_at: string | null
+          level: number | null
+          metadata: Json | null
+          name: string | null
+          owner: string | null
+          owner_id: string | null
+          path_tokens: string[] | null
+          updated_at: string | null
+          user_metadata: Json | null
+          version: string | null
+        }
         Insert: {
-          bucket_id?: string | null;
-          created_at?: string | null;
-          id?: string;
-          last_accessed_at?: string | null;
-          metadata?: Json | null;
-          name?: string | null;
-          owner?: string | null;
-          owner_id?: string | null;
-          path_tokens?: string[] | null;
-          updated_at?: string | null;
-          user_metadata?: Json | null;
-          version?: string | null;
-        };
+          bucket_id?: string | null
+          created_at?: string | null
+          id?: string
+          last_accessed_at?: string | null
+          level?: number | null
+          metadata?: Json | null
+          name?: string | null
+          owner?: string | null
+          owner_id?: string | null
+          path_tokens?: string[] | null
+          updated_at?: string | null
+          user_metadata?: Json | null
+          version?: string | null
+        }
         Update: {
-          bucket_id?: string | null;
-          created_at?: string | null;
-          id?: string;
-          last_accessed_at?: string | null;
-          metadata?: Json | null;
-          name?: string | null;
-          owner?: string | null;
-          owner_id?: string | null;
-          path_tokens?: string[] | null;
-          updated_at?: string | null;
-          user_metadata?: Json | null;
-          version?: string | null;
-        };
+          bucket_id?: string | null
+          created_at?: string | null
+          id?: string
+          last_accessed_at?: string | null
+          level?: number | null
+          metadata?: Json | null
+          name?: string | null
+          owner?: string | null
+          owner_id?: string | null
+          path_tokens?: string[] | null
+          updated_at?: string | null
+          user_metadata?: Json | null
+          version?: string | null
+        }
         Relationships: [
           {
-            foreignKeyName: 'objects_bucketId_fkey';
-            columns: ['bucket_id'];
-            isOneToOne: false;
-            referencedRelation: 'buckets';
-            referencedColumns: ['id'];
+            foreignKeyName: "objects_bucketId_fkey"
+            columns: ["bucket_id"]
+            isOneToOne: false
+            referencedRelation: "buckets"
+            referencedColumns: ["id"]
           },
-        ];
-      };
+        ]
+      }
+      prefixes: {
+        Row: {
+          bucket_id: string
+          created_at: string | null
+          level: number
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          bucket_id: string
+          created_at?: string | null
+          level?: number
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          bucket_id?: string
+          created_at?: string | null
+          level?: number
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prefixes_bucketId_fkey"
+            columns: ["bucket_id"]
+            isOneToOne: false
+            referencedRelation: "buckets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       s3_multipart_uploads: {
         Row: {
-          bucket_id: string;
-          created_at: string;
-          id: string;
-          in_progress_size: number;
-          key: string;
-          owner_id: string | null;
-          upload_signature: string;
-          user_metadata: Json | null;
-          version: string;
-        };
+          bucket_id: string
+          created_at: string
+          id: string
+          in_progress_size: number
+          key: string
+          owner_id: string | null
+          upload_signature: string
+          user_metadata: Json | null
+          version: string
+        }
         Insert: {
-          bucket_id: string;
-          created_at?: string;
-          id: string;
-          in_progress_size?: number;
-          key: string;
-          owner_id?: string | null;
-          upload_signature: string;
-          user_metadata?: Json | null;
-          version: string;
-        };
+          bucket_id: string
+          created_at?: string
+          id: string
+          in_progress_size?: number
+          key: string
+          owner_id?: string | null
+          upload_signature: string
+          user_metadata?: Json | null
+          version: string
+        }
         Update: {
-          bucket_id?: string;
-          created_at?: string;
-          id?: string;
-          in_progress_size?: number;
-          key?: string;
-          owner_id?: string | null;
-          upload_signature?: string;
-          user_metadata?: Json | null;
-          version?: string;
-        };
+          bucket_id?: string
+          created_at?: string
+          id?: string
+          in_progress_size?: number
+          key?: string
+          owner_id?: string | null
+          upload_signature?: string
+          user_metadata?: Json | null
+          version?: string
+        }
         Relationships: [
           {
-            foreignKeyName: 's3_multipart_uploads_bucket_id_fkey';
-            columns: ['bucket_id'];
-            isOneToOne: false;
-            referencedRelation: 'buckets';
-            referencedColumns: ['id'];
+            foreignKeyName: "s3_multipart_uploads_bucket_id_fkey"
+            columns: ["bucket_id"]
+            isOneToOne: false
+            referencedRelation: "buckets"
+            referencedColumns: ["id"]
           },
-        ];
-      };
+        ]
+      }
       s3_multipart_uploads_parts: {
         Row: {
-          bucket_id: string;
-          created_at: string;
-          etag: string;
-          id: string;
-          key: string;
-          owner_id: string | null;
-          part_number: number;
-          size: number;
-          upload_id: string;
-          version: string;
-        };
+          bucket_id: string
+          created_at: string
+          etag: string
+          id: string
+          key: string
+          owner_id: string | null
+          part_number: number
+          size: number
+          upload_id: string
+          version: string
+        }
         Insert: {
-          bucket_id: string;
-          created_at?: string;
-          etag: string;
-          id?: string;
-          key: string;
-          owner_id?: string | null;
-          part_number: number;
-          size?: number;
-          upload_id: string;
-          version: string;
-        };
+          bucket_id: string
+          created_at?: string
+          etag: string
+          id?: string
+          key: string
+          owner_id?: string | null
+          part_number: number
+          size?: number
+          upload_id: string
+          version: string
+        }
         Update: {
-          bucket_id?: string;
-          created_at?: string;
-          etag?: string;
-          id?: string;
-          key?: string;
-          owner_id?: string | null;
-          part_number?: number;
-          size?: number;
-          upload_id?: string;
-          version?: string;
-        };
+          bucket_id?: string
+          created_at?: string
+          etag?: string
+          id?: string
+          key?: string
+          owner_id?: string | null
+          part_number?: number
+          size?: number
+          upload_id?: string
+          version?: string
+        }
         Relationships: [
           {
-            foreignKeyName: 's3_multipart_uploads_parts_bucket_id_fkey';
-            columns: ['bucket_id'];
-            isOneToOne: false;
-            referencedRelation: 'buckets';
-            referencedColumns: ['id'];
+            foreignKeyName: "s3_multipart_uploads_parts_bucket_id_fkey"
+            columns: ["bucket_id"]
+            isOneToOne: false
+            referencedRelation: "buckets"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 's3_multipart_uploads_parts_upload_id_fkey';
-            columns: ['upload_id'];
-            isOneToOne: false;
-            referencedRelation: 's3_multipart_uploads';
-            referencedColumns: ['id'];
+            foreignKeyName: "s3_multipart_uploads_parts_upload_id_fkey"
+            columns: ["upload_id"]
+            isOneToOne: false
+            referencedRelation: "s3_multipart_uploads"
+            referencedColumns: ["id"]
           },
-        ];
-      };
-    };
+        ]
+      }
+    }
     Views: {
-      [_ in never]: never;
-    };
+      [_ in never]: never
+    }
     Functions: {
+      add_prefixes: {
+        Args: { _bucket_id: string; _name: string }
+        Returns: undefined
+      }
       can_insert_object: {
-        Args: {
-          bucketid: string;
-          name: string;
-          owner: string;
-          metadata: Json;
-        };
-        Returns: undefined;
-      };
+        Args: { bucketid: string; metadata: Json; name: string; owner: string }
+        Returns: undefined
+      }
+      delete_leaf_prefixes: {
+        Args: { bucket_ids: string[]; names: string[] }
+        Returns: undefined
+      }
+      delete_prefix: {
+        Args: { _bucket_id: string; _name: string }
+        Returns: boolean
+      }
       extension: {
-        Args: {
-          name: string;
-        };
-        Returns: string;
-      };
+        Args: { name: string }
+        Returns: string
+      }
       filename: {
-        Args: {
-          name: string;
-        };
-        Returns: string;
-      };
+        Args: { name: string }
+        Returns: string
+      }
       foldername: {
-        Args: {
-          name: string;
-        };
-        Returns: string[];
-      };
+        Args: { name: string }
+        Returns: string[]
+      }
+      get_level: {
+        Args: { name: string }
+        Returns: number
+      }
+      get_prefix: {
+        Args: { name: string }
+        Returns: string
+      }
+      get_prefixes: {
+        Args: { name: string }
+        Returns: string[]
+      }
       get_size_by_bucket: {
-        Args: Record<PropertyKey, never>;
+        Args: Record<PropertyKey, never>
         Returns: {
-          size: number;
-          bucket_id: string;
-        }[];
-      };
+          bucket_id: string
+          size: number
+        }[]
+      }
       list_multipart_uploads_with_delimiter: {
         Args: {
-          bucket_id: string;
-          prefix_param: string;
-          delimiter_param: string;
-          max_keys?: number;
-          next_key_token?: string;
-          next_upload_token?: string;
-        };
+          bucket_id: string
+          delimiter_param: string
+          max_keys?: number
+          next_key_token?: string
+          next_upload_token?: string
+          prefix_param: string
+        }
         Returns: {
-          key: string;
-          id: string;
-          created_at: string;
-        }[];
-      };
+          created_at: string
+          id: string
+          key: string
+        }[]
+      }
       list_objects_with_delimiter: {
         Args: {
-          bucket_id: string;
-          prefix_param: string;
-          delimiter_param: string;
-          max_keys?: number;
-          start_after?: string;
-          next_token?: string;
-        };
+          bucket_id: string
+          delimiter_param: string
+          max_keys?: number
+          next_token?: string
+          prefix_param: string
+          start_after?: string
+        }
         Returns: {
-          name: string;
-          id: string;
-          metadata: Json;
-          updated_at: string;
-        }[];
-      };
+          id: string
+          metadata: Json
+          name: string
+          updated_at: string
+        }[]
+      }
+      lock_top_prefixes: {
+        Args: { bucket_ids: string[]; names: string[] }
+        Returns: undefined
+      }
       operation: {
-        Args: Record<PropertyKey, never>;
-        Returns: string;
-      };
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       search: {
         Args: {
-          prefix: string;
-          bucketname: string;
-          limits?: number;
-          levels?: number;
-          offsets?: number;
-          search?: string;
-          sortcolumn?: string;
-          sortorder?: string;
-        };
+          bucketname: string
+          levels?: number
+          limits?: number
+          offsets?: number
+          prefix: string
+          search?: string
+          sortcolumn?: string
+          sortorder?: string
+        }
         Returns: {
-          name: string;
-          id: string;
-          updated_at: string;
-          created_at: string;
-          last_accessed_at: string;
-          metadata: Json;
-        }[];
-      };
-    };
+          created_at: string
+          id: string
+          last_accessed_at: string
+          metadata: Json
+          name: string
+          updated_at: string
+        }[]
+      }
+      search_legacy_v1: {
+        Args: {
+          bucketname: string
+          levels?: number
+          limits?: number
+          offsets?: number
+          prefix: string
+          search?: string
+          sortcolumn?: string
+          sortorder?: string
+        }
+        Returns: {
+          created_at: string
+          id: string
+          last_accessed_at: string
+          metadata: Json
+          name: string
+          updated_at: string
+        }[]
+      }
+      search_v1_optimised: {
+        Args: {
+          bucketname: string
+          levels?: number
+          limits?: number
+          offsets?: number
+          prefix: string
+          search?: string
+          sortcolumn?: string
+          sortorder?: string
+        }
+        Returns: {
+          created_at: string
+          id: string
+          last_accessed_at: string
+          metadata: Json
+          name: string
+          updated_at: string
+        }[]
+      }
+      search_v2: {
+        Args: {
+          bucket_name: string
+          levels?: number
+          limits?: number
+          prefix: string
+          sort_column?: string
+          sort_column_after?: string
+          sort_order?: string
+          start_after?: string
+        }
+        Returns: {
+          created_at: string
+          id: string
+          key: string
+          last_accessed_at: string
+          metadata: Json
+          name: string
+          updated_at: string
+        }[]
+      }
+    }
     Enums: {
-      [_ in never]: never;
-    };
+      buckettype: "STANDARD" | "ANALYTICS"
+    }
     CompositeTypes: {
-      [_ in never]: never;
-    };
-  };
-};
+      [_ in never]: never
+    }
+  }
+}
 
-type PublicSchema = Database[Extract<keyof Database, 'public'>];
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
-  PublicTableNameOrOptions extends
-    | keyof (PublicSchema['Tables'] & PublicSchema['Views'])
-    | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof (Database[PublicTableNameOrOptions['schema']]['Tables'] &
-        Database[PublicTableNameOrOptions['schema']]['Views'])
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? (Database[PublicTableNameOrOptions['schema']]['Tables'] &
-      Database[PublicTableNameOrOptions['schema']]['Views'])[TableName] extends {
-      Row: infer R;
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
     }
     ? R
     : never
-  : PublicTableNameOrOptions extends keyof (PublicSchema['Tables'] &
-        PublicSchema['Views'])
-    ? (PublicSchema['Tables'] &
-        PublicSchema['Views'])[PublicTableNameOrOptions] extends {
-        Row: infer R;
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
       }
       ? R
       : never
-    : never;
+    : never
 
 export type TablesInsert<
-  PublicTableNameOrOptions extends
-    | keyof PublicSchema['Tables']
-    | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicTableNameOrOptions['schema']]['Tables']
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicTableNameOrOptions['schema']]['Tables'][TableName] extends {
-      Insert: infer I;
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
     }
     ? I
     : never
-  : PublicTableNameOrOptions extends keyof PublicSchema['Tables']
-    ? PublicSchema['Tables'][PublicTableNameOrOptions] extends {
-        Insert: infer I;
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
       }
       ? I
       : never
-    : never;
+    : never
 
 export type TablesUpdate<
-  PublicTableNameOrOptions extends
-    | keyof PublicSchema['Tables']
-    | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicTableNameOrOptions['schema']]['Tables']
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicTableNameOrOptions['schema']]['Tables'][TableName] extends {
-      Update: infer U;
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
     }
     ? U
     : never
-  : PublicTableNameOrOptions extends keyof PublicSchema['Tables']
-    ? PublicSchema['Tables'][PublicTableNameOrOptions] extends {
-        Update: infer U;
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
       }
       ? U
       : never
-    : never;
+    : never
 
 export type Enums<
-  PublicEnumNameOrOptions extends
-    | keyof PublicSchema['Enums']
-    | { schema: keyof Database },
-  EnumName extends PublicEnumNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicEnumNameOrOptions['schema']]['Enums']
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
-> = PublicEnumNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicEnumNameOrOptions['schema']]['Enums'][EnumName]
-  : PublicEnumNameOrOptions extends keyof PublicSchema['Enums']
-    ? PublicSchema['Enums'][PublicEnumNameOrOptions]
-    : never;
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
-    | keyof PublicSchema['CompositeTypes']
-    | { schema: keyof Database },
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof Database;
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[PublicCompositeTypeNameOrOptions['schema']]['CompositeTypes']
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
     : never = never,
-> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicCompositeTypeNameOrOptions['schema']]['CompositeTypes'][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof PublicSchema['CompositeTypes']
-    ? PublicSchema['CompositeTypes'][PublicCompositeTypeNameOrOptions]
-    : never;
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
+  public: {
+    Enums: {
+      delivery_status: [
+        "preparing",
+        "in_transit",
+        "out_for_delivery",
+        "delivered",
+        "failed",
+        "returned",
+      ],
+      discount_type: ["percentage", "fixed", "buy_x_get_y"],
+      order_status: [
+        "pending",
+        "processing",
+        "shipped",
+        "delivered",
+        "cancelled",
+        "refunded",
+      ],
+      payment_status: ["pending", "completed", "failed", "refunded"],
+    },
+  },
+  storage: {
+    Enums: {
+      buckettype: ["STANDARD", "ANALYTICS"],
+    },
+  },
+} as const
+

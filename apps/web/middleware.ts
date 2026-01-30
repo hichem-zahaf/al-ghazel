@@ -19,7 +19,7 @@ export const config = {
 const getUser = (request: NextRequest, response: NextResponse) => {
   const supabase = createMiddlewareClient(request, response);
 
-  return supabase.auth.getClaims();
+  return supabase.auth.getUser();
 };
 
 export async function middleware(request: NextRequest) {
@@ -94,18 +94,58 @@ function isServerAction(request: NextRequest) {
 
   return headers.has(NEXT_ACTION_HEADER);
 }
+
+/**
+ * Admin middleware - Protect admin routes and redirect superadmins from home
+ */
+async function adminMiddleware(request: NextRequest, response: NextResponse) {
+  const isAdminPath = request.nextUrl.pathname.startsWith('/admin');
+
+  if (!isAdminPath) {
+    return response;
+  }
+
+  const {
+    data: { user },
+    error,
+  } = await getUser(request, response);
+
+  // If user is not logged in, redirect to sign in page
+  if (!user || error) {
+    return NextResponse.redirect(
+      new URL(pathsConfig.auth.signIn, request.nextUrl.origin).href,
+    );
+  }
+
+  const role = user?.app_metadata?.role;
+
+  // If user is not a super-admin, redirect to 404 page
+  if (!role || role !== 'super-admin') {
+    return NextResponse.redirect(new URL('/home', request.nextUrl.origin).href);
+  }
+
+  // In all other cases, return the response
+  return response;
+}
+
 /**
  * Define URL patterns and their corresponding handlers.
  */
 function getPatterns() {
   return [
     {
+      pattern: new URLPattern({ pathname: '/admin/*?' }),
+      handler: adminMiddleware,
+    },
+    {
       pattern: new URLPattern({ pathname: '/auth/*?' }),
       handler: async (req: NextRequest, res: NextResponse) => {
-        const { data } = await getUser(req, res);
+        const {
+          data: { user },
+        } = await getUser(req, res);
 
         // the user is logged out, so we don't need to do anything
-        if (!data?.claims) {
+        if (!user) {
           return;
         }
 
@@ -124,13 +164,15 @@ function getPatterns() {
     {
       pattern: new URLPattern({ pathname: '/home/*?' }),
       handler: async (req: NextRequest, res: NextResponse) => {
-        const { data } = await getUser(req, res);
+        const {
+          data: { user },
+        } = await getUser(req, res);
 
         const origin = req.nextUrl.origin;
         const next = req.nextUrl.pathname;
 
         // If user is not logged in, redirect to sign in page.
-        if (!data?.claims) {
+        if (!user) {
           const signIn = pathsConfig.auth.signIn;
           const redirectPath = `${signIn}?next=${next}`;
 
@@ -147,6 +189,12 @@ function getPatterns() {
           return NextResponse.redirect(
             new URL(pathsConfig.auth.verifyMfa, origin).href,
           );
+        }
+
+        // Redirect superadmins to admin dashboard
+        const role = user?.app_metadata?.role;
+        if (role === 'super-admin' && req.nextUrl.pathname === '/home') {
+          return NextResponse.redirect(new URL('/admin', origin).href);
         }
       },
     },
