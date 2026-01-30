@@ -1,0 +1,215 @@
+services:
+  # Supabase Studio - Web interface for managing Supabase
+  studio:
+    container_name: al-ghazel-studio
+    image: supabase/studio:20250130-48a6592
+    restart: unless-stopped
+    environment:
+      STUDIO_PG_META_URL: http://meta:8080
+      SUPABASE_URL: http://kong:8000
+      SUPABASE_PUBLIC_URL: http://kong:8000
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0}
+      SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU}
+    ports:
+      - ${STUDIO_PORT:-54323}:3000
+    depends_on:
+      - kong
+
+  # Kong API Gateway
+  kong:
+    container_name: al-ghazel-kong
+    image: kong:2.8.1
+    restart: unless-stopped
+    entrypoint: bash -c 'kong migrations bootstrap && /docker-entrypoint.sh kong docker-start'
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: db
+      KONG_PG_DATABASE: ${KONG_PG_DATABASE:-supabase_kong}
+      KONG_PG_USER: ${KONG_PG_USER:-supabase_admin}
+      KONG_PG_PASSWORD: ${KONG_PG_PASSWORD:-postgres}
+      KONG_PASSWORD: ${KONG_PASSWORD:-postgres}
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+      KONG_ADMIN_GUI_URL: http://localhost:8002
+    ports:
+      - ${KONG_HTTP_PORT:-54321}:8000
+      - ${KONG_HTTPS_PORT:-54320}:8443
+    depends_on:
+      - db
+
+  # Meta API
+  meta:
+    container_name: al-ghazel-meta
+    image: supabase/postgres-meta:v0.83.5
+    restart: unless-stopped
+    environment:
+      PG_META_PORT: 8080
+      PG_META_DB_HOST: db
+      PG_META_DB_PORT: 5432
+      PG_META_DB_NAME: ${PG_META_DB_NAME:-postgres}
+      PG_META_DB_USER: ${PG_META_DB_USER:-supabase_admin}
+      PG_META_DB_PASSWORD: ${PG_META_DB_PASSWORD:-postgres}
+      PG_META_DB_SCHEMA_MAP: '{"public":"public","storage":"storage","graphql_public":"graphql_public"}'
+    depends_on:
+      - db
+
+  # PostgREST API
+  api:
+    container_name: al-ghazel-api
+    image: postgrest/postgrest:v12.2.0
+    restart: unless-stopped
+    environment:
+      PGRST_DB_URI: postgres://authenticator:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-postgres}
+      PGRST_DB_SCHEMAS: ${PGRST_DB_SCHEMAS:-public,storage,graphql_public}
+      PGRST_DB_ANON_ROLE: ${PGRST_DB_ANON_ROLE:-anon}
+      PGRST_JWT_SECRET: ${PGRST_JWT_SECRET:-super-secret-jwt-token-with-at-least-32-characters-long}
+      PGRST_DB_USE_LEGACY_GUCS: false
+    command: "postgrest"
+    depends_on:
+      - db
+
+  # Postgres Database
+  db:
+    container_name: al-ghazel-db
+    image: supabase/postgres:15.8.1.006
+    restart: unless-stopped
+    healthcheck:
+      test: pg_isready -U postgres -h localhost
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    environment:
+      POSTGRES_HOST: /var/run/postgresql
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_ADMIN_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:-postgres}
+    ports:
+      - ${DB_PORT:-54322}:5432
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      # Mount migrations
+      - ./apps/web/supabase/migrations:/docker-entrypoint-initdb.d:ro
+
+  # Realtime Server (for subscriptions)
+  realtime:
+    container_name: al-ghazel-realtime
+    image: supabase/realtime:v2.34.72
+    restart: unless-stopped
+    environment:
+      PORT: 4000
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-supabase_admin}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      DB_NAME: ${DB_NAME:-postgres}
+      DB_AFTER_CONNECT_QUERY: 'SET search_path TO _realtime'
+      JWT_SECRET: ${JWT_SECRET:-super-secret-jwt-token-with-at-least-32-characters-long}
+      SECURE_CHANNELS: true
+      LOG_LEVEL: info
+      API_JWT_SECRET: ${API_JWT_SECRET:-super-secret-jwt-token-with-at-least-32-characters-long}
+      FLY_ALLOC_ID: fly123
+      FLY_APP_NAME: realtime
+      FLY_REGION: iad
+      ERL_AFLAGS: -proto_dist inet_tcp
+    depends_on:
+      - db
+
+  # Storage API
+  storage:
+    container_name: al-ghazel-storage
+    image: supabase/storage-api:v1.14.6
+    restart: unless-stopped
+    environment:
+      ANON_KEY: ${ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0}
+      SERVICE_KEY: ${SERVICE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU}
+      POSTGREST_URL: http://api:3000
+      PGRST_JWT_SECRET: ${PGRST_JWT_SECRET:-super-secret-jwt-token-with-at-least-32-characters-long}
+      DATABASE_URL: postgres://supabase_storage_admin:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-postgres}
+      FILE_SIZE_LIMIT: ${FILE_SIZE_LIMIT:-52428800}
+      STORAGE_BACKEND: file
+      FILE_STORAGE_BACKEND_PATH: /var/lib/storage
+      TENANT_ID: stub
+      REGION: stub
+      GLOBAL_S3_BUCKET: stub
+    depends_on:
+      - db
+      - api
+    volumes:
+      - storage_data:/var/lib/storage
+
+  # Imgproxy for image transformations
+  imgproxy:
+    container_name: al-ghazel-imgproxy
+    image: darthsim/imgproxy:v3.25.0
+    restart: unless-stopped
+    environment:
+      IMGPROXY_BIND: :5001
+      IMGPROXY_LOCAL_ONLY: true
+      IMGPROXY_USE_ETAG: true
+      IMGPROXY_ENABLE_WEBP_DETECTION: ${IMGPROXY_ENABLE_WEBP_DETECTION:-true}
+    ports:
+      - ${IMGPROXY_PORT:-54330}:5001
+
+  # Functions (Edge Functions)
+  functions:
+    container_name: al-ghazel-functions
+    image: supabase/edge-runtime:v1.72.9
+    restart: unless-stopped
+    environment:
+      JWT_SECRET: ${JWT_SECRET:-super-secret-jwt-token-with-at-least-32-characters-long}
+      SUPABASE_URL: http://kong:8000
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU}
+      SUPABASE_DB_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-postgres}
+    depends_on:
+      - db
+    volumes:
+      - ./apps/web/supabase/functions:/home/deno/functions:ro
+
+  # Next.js Web Application
+  web:
+    container_name: al-ghazel-web
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      # Supabase Configuration
+      NEXT_PUBLIC_SUPABASE_URL: http://kong:8000
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU}
+
+      # Site Configuration
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
+      NEXT_PUBLIC_PRODUCT_NAME: ${NEXT_PUBLIC_PRODUCT_NAME:-Al-Ghazel}
+      NEXT_PUBLIC_SITE_TITLE: ${NEXT_PUBLIC_SITE_TITLE:-"Al Ghazel | Quality Books Online"}
+      NEXT_PUBLIC_SITE_DESCRIPTION: ${NEXT_PUBLIC_SITE_DESCRIPTION:-"Al Ghazel is Your online bookstore for philosophy, literature, spirituality, and more."}
+      NEXT_PUBLIC_DEFAULT_THEME_MODE: ${NEXT_PUBLIC_DEFAULT_THEME_MODE:-light}
+      NEXT_PUBLIC_THEME_COLOR: ${NEXT_PUBLIC_THEME_COLOR:-#FAF3E1}
+      NEXT_PUBLIC_THEME_COLOR_DARK: ${NEXT_PUBLIC_THEME_COLOR_DARK:-#222222}
+
+      # Auth Configuration
+      NEXT_PUBLIC_AUTH_PASSWORD: ${NEXT_PUBLIC_AUTH_PASSWORD:-true}
+      NEXT_PUBLIC_AUTH_MAGIC_LINK: ${NEXT_PUBLIC_AUTH_MAGIC_LINK:-false}
+
+      # Feature Flags
+      NEXT_PUBLIC_ENABLE_THEME_TOGGLE: ${NEXT_PUBLIC_ENABLE_THEME_TOGGLE:-true}
+      NEXT_PUBLIC_LANGUAGE_PRIORITY: ${NEXT_PUBLIC_LANGUAGE_PRIORITY:-application}
+      NEXT_PUBLIC_ENABLE_PERSONAL_ACCOUNT_DELETION: ${NEXT_PUBLIC_ENABLE_PERSONAL_ACCOUNT_DELETION:-true}
+
+      # Node Configuration
+      NODE_ENV: production
+      PORT: 3000
+    ports:
+      - ${WEB_PORT:-3000}:3000
+    depends_on:
+      - kong
+      - db
+
+volumes:
+  db_data:
+  storage_data:

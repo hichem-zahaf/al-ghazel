@@ -17,6 +17,8 @@ const config = {
   reactStrictMode: true,
   /** Enables hot reloading for local packages without a build step */
   transpilePackages: INTERNAL_PACKAGES,
+  /** Output mode for Docker builds - creates standalone server */
+  output: 'standalone',
   images: {
     remotePatterns: getRemotePatterns(),
   },
