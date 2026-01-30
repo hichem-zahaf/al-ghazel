@@ -1,7 +1,7 @@
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { SiteFooter } from '~/(marketing)/_components/site-footer';
-import { SiteHeader } from '~/(marketing)/_components/site-header';
+import { SiteHeaderWrapper } from '~/(marketing)/_components/site-header-wrapper';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 async function SiteLayout(props: React.PropsWithChildren) {
@@ -11,7 +11,7 @@ async function SiteLayout(props: React.PropsWithChildren) {
 
   return (
     <div className={'flex min-h-[100vh] flex-col'}>
-      <SiteHeader user={data?.claims} />
+      <SiteHeaderWrapper user={data?.claims} />
 
       {props.children}
 

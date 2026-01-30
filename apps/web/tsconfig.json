@@ -6,7 +6,8 @@
       "~/*": ["./app/*"],
       "~/config/*": ["./config/*"],
       "~/components/*": ["./components/*"],
-      "~/lib/*": ["./lib/*"]
+      "~/lib/*": ["./lib/*"],
+      "~/types/*": ["./types/*"]
     },
     "plugins": [
       {
@@ -23,6 +24,7 @@
     "./config/**/*.ts",
     "components/**/*",
     "lib/**/*.ts",
+    "types/**/*.ts",
     "app"
   ],
   "exclude": ["node_modules", ".next"]

@@ -23,7 +23,7 @@ const GlobalErrorPage = ({
     <html>
       <body>
         <div className={'flex h-screen flex-1 flex-col'}>
-          <SiteHeader />
+          <SiteHeader user={null} books={[]} categories={[]} authors={[]} />
 
           <div
             className={

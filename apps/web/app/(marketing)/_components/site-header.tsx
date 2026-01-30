@@ -15,11 +15,16 @@ import { AiChatButton } from './ai-chat-button';
 import { SearchModal } from './bookstore/search-modal';
 import { BookDiscoveryModal } from './bookstore/book-discovery-modal';
 import { AiChatModal } from './bookstore/ai-chat-modal';
-import { mockBooks } from '~/lib/../data/mock-books';
-import { mockCategories } from '~/lib/../data/mock-categories';
-import { mockAuthors } from '~/lib/../data/mock-authors';
+import type { Book, Category, Author } from '~/types/bookstore';
 
-export function SiteHeader(props: { user?: JwtPayload | null }) {
+interface SiteHeaderProps {
+  user?: JwtPayload | null;
+  books: Book[];
+  categories: Category[];
+  authors: Author[];
+}
+
+export function SiteHeader({ user, books, categories, authors }: SiteHeaderProps) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isDiscoveryOpen, setIsDiscoveryOpen] = useState(false);
   const [isAiChatOpen, setIsAiChatOpen] = useState(false);
@@ -34,24 +39,24 @@ export function SiteHeader(props: { user?: JwtPayload | null }) {
             <SearchButton onClick={() => setIsSearchOpen(true)} />
             <AiChatButton onClick={() => setIsAiChatOpen(true)} />
             <DiscoverButton onClick={() => setIsDiscoveryOpen(true)} />
-            <SiteHeaderAccountSection user={props.user ?? null} />
+            <SiteHeaderAccountSection user={user ?? null} />
           </>
         }
       />
       <SearchModal
-        books={mockBooks}
-        categories={mockCategories}
-        authors={mockAuthors}
+        books={books}
+        categories={categories}
+        authors={authors}
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
       />
       <BookDiscoveryModal
-        books={mockBooks}
+        books={books}
         isOpen={isDiscoveryOpen}
         onClose={() => setIsDiscoveryOpen(false)}
       />
       <AiChatModal
-        books={mockBooks}
+        books={books}
         isOpen={isAiChatOpen}
         onClose={() => setIsAiChatOpen(false)}
       />
