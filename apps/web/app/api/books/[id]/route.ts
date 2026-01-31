@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import type { Database } from '~/lib/database.types';
 
 type BookUpdate = Database['public']['Tables']['books']['Update'];
@@ -46,7 +47,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = getSupabaseServerClient();
+    const supabase = getSupabaseServerAdminClient();
     const { id } = await params;
 
     const { error } = await supabase

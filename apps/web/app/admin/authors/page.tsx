@@ -233,6 +233,13 @@ export default function AdminAuthorsPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingAuthorId, setDeletingAuthorId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // Alert dialog state
+  const [alertDialogOpen, setAlertDialogOpen] = useState(false);
+  const [alertConfig, setAlertConfig] = useState<{
+    title: string;
+    description: string;
+    variant?: 'destructive' | 'default';
+  }>({ title: '', description: '' });
 
   // Form setup with memoized default values
   const defaultFormValues = useMemo<AuthorFormValues>(() => ({
@@ -386,14 +393,29 @@ export default function AdminAuthorsPage() {
       } else {
         const error = await response.json();
         if (error.error?.includes('foreign key constraint') || error.error?.includes('violates foreign key')) {
-          alert('Cannot delete author with existing books. Please delete or reassign the books first.');
+          setAlertConfig({
+            title: 'Cannot Delete Author',
+            description: 'This author has existing books. Please delete or reassign the books first.',
+            variant: 'destructive',
+          });
+          setAlertDialogOpen(true);
         } else {
-          alert('Failed to delete author: ' + (error.error || 'Unknown error'));
+          setAlertConfig({
+            title: 'Delete Failed',
+            description: error.error || 'Unknown error',
+            variant: 'destructive',
+          });
+          setAlertDialogOpen(true);
         }
       }
     } catch (error) {
       console.error('Error deleting author:', error);
-      alert('Failed to delete author. Please try again.');
+      setAlertConfig({
+        title: 'Delete Failed',
+        description: 'Failed to delete author. Please try again.',
+        variant: 'destructive',
+      });
+      setAlertDialogOpen(true);
     } finally {
       setSubmitting(false);
     }
@@ -414,16 +436,26 @@ export default function AdminAuthorsPage() {
       const succeeded = results.filter(r => r.status === 'fulfilled' && r.value.ok).length;
       const failed = results.length - succeeded;
 
-      if (failed > 0) {
-        alert(`Deleted ${succeeded} authors. ${failed} authors could not be deleted (likely due to existing books).`);
-      }
-
       setSelectedIds(new Set());
       setIsAllSelected(false);
       fetchAuthors(); // Refresh data
+
+      if (failed > 0) {
+        setAlertConfig({
+          title: 'Partial Success',
+          description: `Deleted ${succeeded} authors. ${failed} authors could not be deleted (likely due to existing books).`,
+          variant: 'destructive',
+        });
+        setAlertDialogOpen(true);
+      }
     } catch (error) {
       console.error('Error deleting authors:', error);
-      alert('Failed to delete some authors. Please try again.');
+      setAlertConfig({
+        title: 'Delete Failed',
+        description: 'Failed to delete some authors. Please try again.',
+        variant: 'destructive',
+      });
+      setAlertDialogOpen(true);
     } finally {
       setSubmitting(false);
     }
@@ -874,6 +906,23 @@ export default function AdminAuthorsPage() {
               ) : (
                 'Delete'
               )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Alert Dialog for Errors/Success Messages */}
+      <AlertDialog open={alertDialogOpen} onOpenChange={setAlertDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{alertConfig.title}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {alertConfig.description}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setAlertDialogOpen(false)}>
+              OK
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

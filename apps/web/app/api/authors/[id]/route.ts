@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 // PATCH /api/authors/[id] - Update an author
 export async function PATCH(
@@ -56,7 +57,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = getSupabaseServerClient();
+    const supabase = getSupabaseServerAdminClient();
     const { id } = await params;
 
     const { error } = await supabase
