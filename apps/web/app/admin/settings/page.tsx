@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Plus,
   Pencil,
@@ -25,8 +25,14 @@ import {
   Search,
   Shuffle,
   AlignHorizontalSpaceAround,
+  X,
+  Check,
+  Loader2,
+  AlertCircle,
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { useDrag, useDrop, DndProvider } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
 
 import { PageBody } from '@kit/ui/page';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@kit/ui/card';
@@ -59,10 +65,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@kit/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@kit/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
 import { cn } from '@kit/ui/utils';
 import { AdminDataTable, FilterConfig } from '../_components/admin-data-table';
 
+// Types
 interface Coupon {
   id: string;
   code: string;
@@ -75,305 +92,457 @@ interface Coupon {
   isActive: boolean;
 }
 
-// Homepage Section Configuration Types
 interface SectionConfig {
   id: string;
-  title: string;
-  description: string;
-  icon: React.ElementType;
+  section_id: string;
+  section_title: string;
+  section_description: string | null;
   enabled: boolean;
   order: number;
   config: Record<string, unknown>;
 }
 
-interface HomepageConfig {
-  heroSection: SectionConfig;
-  categoriesSection: SectionConfig;
-  bookOfTheDaySection: SectionConfig;
-  authorOfTheDaySection: SectionConfig;
-  recommendedBooksSection: SectionConfig;
-  forYouSection: SectionConfig;
-  bookRouletteSection: SectionConfig;
-  searchSection: SectionConfig;
+interface Book {
+  id: string;
+  title: string;
+  subtitle: string | null;
+  author_id: string;
+  authors?: { id: string; name: string } | null;
+  cover_image_url: string | null;
+  price: number;
+  rating: number | null;
+  is_featured: boolean | null;
+  is_bestseller: boolean | null;
+  is_new_release: boolean | null;
 }
 
+interface Author {
+  id: string;
+  name: string;
+  bio: string | null;
+  avatar_url: string | null;
+  book_count?: number;
+}
+
+interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  icon: string | null;
+  book_count: number | null;
+  display_order: number | null;
+}
+
+// Mock coupons
 const mockCoupons: Coupon[] = [
   { id: 'c1', code: 'SUMMER20', discountType: 'percentage', discountValue: 20, usageLimit: 100, usedCount: 45, validFrom: new Date('2024-01-01'), validUntil: new Date('2024-12-31'), isActive: true },
   { id: 'c2', code: 'WELCOME10', discountType: 'fixed', discountValue: 10, usageLimit: 500, usedCount: 123, validFrom: new Date('2024-01-01'), validUntil: new Date('2024-06-30'), isActive: true },
 ];
 
-// Mock homepage section configurations
-const homepageSections: SectionConfig[] = [
-  {
-    id: 'hero',
-    title: 'Hero Section',
-    description: 'Main banner and call-to-action area at the top of the page',
-    icon: Layers,
-    enabled: true,
-    order: 1,
-    config: {
-      title: 'Welcome to Al-Ghazel Bookstore',
-      subtitle: 'Discover your next favorite book from our curated collection',
-      ctaText: 'Browse Collection',
-      ctaLink: '/books',
-      backgroundImage: '/images/hero-bg.jpg',
-      showOverlay: true,
-    },
-  },
-  {
-    id: 'categories',
-    title: 'Category Carousel',
-    description: 'Horizontal scrollable list of book categories',
-    icon: AlignHorizontalSpaceAround,
-    enabled: true,
-    order: 2,
-    config: {
-      title: 'Browse by Category',
-      showIcon: true,
-      showBookCount: true,
-      autoScroll: false,
-      scrollSpeed: 3000,
-    },
-  },
-  {
-    id: 'book-of-the-day',
-    title: 'Book of the Day',
-    description: 'Featured book with detailed description',
-    icon: BookOpen,
-    enabled: true,
-    order: 3,
-    config: {
-      title: 'Book of the Day',
-      showRating: true,
-      showPrice: true,
-      showAddToCart: true,
-      layout: 'featured',
-    },
-  },
-  {
-    id: 'author-of-the-day',
-    title: 'Author of the Day',
-    description: 'Featured author spotlight section',
-    icon: User,
-    enabled: true,
-    order: 4,
-    config: {
-      title: 'Author Spotlight',
-      showBio: true,
-      showBookCount: true,
-      showSocialLinks: true,
-      maxBooks: 3,
-    },
-  },
-  {
-    id: 'recommended-books',
-    title: 'Recommended Books',
-    description: 'Bestsellers and trending books section',
-    icon: Star,
-    enabled: true,
-    order: 5,
-    config: {
-      title: 'Recommended for You',
-      subtitle: 'Handpicked selections based on popularity',
-      bookCount: 6,
-      showRating: true,
-      showAuthor: true,
-      layout: 'grid',
-    },
-  },
-  {
-    id: 'for-you',
-    title: 'For You Section',
-    description: 'Personalized new releases and recommendations',
-    icon: Sparkles,
-    enabled: true,
-    order: 6,
-    config: {
-      title: 'New Releases Just for You',
-      subtitle: 'Fresh arrivals tailored to your taste',
-      bookCount: 12,
-      showNewBadge: true,
-      showDiscount: true,
-      layout: 'horizontal-scroll',
-    },
-  },
-  {
-    id: 'book-roulette',
-    title: 'Book Roulette',
-    description: 'Interactive random book discovery section',
-    icon: Shuffle,
-    enabled: true,
-    order: 7,
-    config: {
-      title: 'Feeling Lucky?',
-      description: 'Spin to discover a random book from our collection',
-      showAnimation: true,
-      dailyLimit: 10,
-    },
-  },
-  {
-    id: 'search',
-    title: 'Search Section',
-    description: 'Advanced search and filter area',
-    icon: Search,
-    enabled: true,
-    order: 8,
-    config: {
-      title: 'Find Your Perfect Book',
-      showFilters: true,
-      showSuggestions: true,
-      filterCategories: true,
-      filterAuthors: true,
-      filterPrice: true,
-    },
-  },
-];
+// Drag and Drop Types
+const ItemType = 'SECTION';
 
-// Section Config Fields Component
-function SectionConfigFields({ section }: { section: SectionConfig }) {
-  const config = section.config;
+// Draggable Section Card Component
+interface DraggableSectionCardProps {
+  section: SectionConfig;
+  index: number;
+  moveSection: (dragIndex: number, hoverIndex: number) => void;
+  expandedSection: string | null;
+  setExpandedSection: (id: string | null) => void;
+  onSectionChange: (sectionId: string, updates: Partial<SectionConfig>) => void;
+  books: Book[];
+  authors: Author[];
+  categories: Category[];
+}
 
-  if (section.id === 'hero') {
+function DraggableSectionCard({
+  section,
+  index,
+  moveSection,
+  expandedSection,
+  setExpandedSection,
+  onSectionChange,
+  books,
+  authors,
+  categories,
+}: DraggableSectionCardProps) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  const [{ isDragging }, drag] = useDrag({
+    type: ItemType,
+    item: { index },
+    collect: (monitor) => ({
+      isDragging: monitor.isDragging(),
+    }),
+  });
+
+  const [, drop] = useDrop({
+    accept: ItemType,
+    hover(item: { index: number }, monitor) {
+      if (!ref.current) {
+        return;
+      }
+      const dragIndex = item.index;
+      const hoverIndex = index;
+
+      if (dragIndex === hoverIndex) {
+        return;
+      }
+
+      moveSection(dragIndex, hoverIndex);
+      item.index = hoverIndex;
+    },
+  });
+
+  drag(drop(ref));
+
+  const isExpanded = expandedSection === section.section_id;
+
+  const sectionIcons: Record<string, React.ElementType> = {
+    hero: Layers,
+    categories: AlignHorizontalSpaceAround,
+    'book-of-the-day': BookOpen,
+    'author-of-the-day': User,
+    'recommended-books': Star,
+    'for-you': Sparkles,
+    'book-roulette': Shuffle,
+    search: Search,
+  };
+
+  const Icon = sectionIcons[section.section_id] || Layers;
+
+  return (
+    <div ref={ref} className={cn(isDragging && 'opacity-50')}>
+      <Card
+        className={cn(
+          'transition-all duration-200',
+          !section.enabled && 'opacity-60',
+          isExpanded && 'ring-2 ring-orange-200 dark:ring-orange-800'
+        )}
+      >
+        {/* Section Header */}
+        <div className="flex items-center gap-4 p-4">
+          <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab" />
+
+          {/* Icon */}
+          <div className={cn(
+            'flex h-12 w-12 items-center justify-center rounded-xl',
+            section.enabled
+              ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400'
+              : 'bg-muted text-muted-foreground'
+          )}>
+            <Icon className="h-6 w-6" />
+          </div>
+
+          {/* Info */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-3">
+              <h3 className="font-semibold text-lg">{section.section_title}</h3>
+              <Badge variant={section.enabled ? 'default' : 'secondary'} className="gap-1">
+                Order {section.order}
+              </Badge>
+            </div>
+            <p className="text-sm text-muted-foreground mt-0.5">{section.section_description}</p>
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center gap-2">
+            <Switch
+              checked={section.enabled}
+              onCheckedChange={(checked) => onSectionChange(section.section_id, { enabled: checked })}
+            />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setExpandedSection(isExpanded ? null : section.section_id)}
+            >
+              {isExpanded ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+        </div>
+
+        {/* Expanded Config */}
+        {isExpanded && (
+          <div className="border-t bg-muted/30 p-4 space-y-6">
+            {/* Quick Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="bg-background rounded-lg p-3 border">
+                <p className="text-xs text-muted-foreground">Status</p>
+                <p className="font-medium flex items-center gap-1.5 mt-1">
+                  {section.enabled ? (
+                    <><Eye className="h-3.5 w-3.5 text-green-600" /><span className="text-green-600">Visible</span></>
+                  ) : (
+                    <><EyeOff className="h-3.5 w-3.5 text-muted-foreground" /><span>Hidden</span></>
+                  )}
+                </p>
+              </div>
+              <div className="bg-background rounded-lg p-3 border">
+                <p className="text-xs text-muted-foreground">Position</p>
+                <p className="font-medium mt-1">{section.order}</p>
+              </div>
+              <div className="bg-background rounded-lg p-3 border">
+                <p className="text-xs text-muted-foreground">Config Items</p>
+                <p className="font-medium mt-1">{Object.keys(section.config).length}</p>
+              </div>
+              <div className="bg-background rounded-lg p-3 border">
+                <p className="text-xs text-muted-foreground">Section ID</p>
+                <p className="font-mono text-sm mt-1">{section.section_id}</p>
+              </div>
+            </div>
+
+            {/* Configuration Form */}
+            <div>
+              <h4 className="font-semibold mb-4 flex items-center gap-2">
+                <SlidersHorizontal className="h-4 w-4" />
+                Section Configuration
+              </h4>
+
+              {/* Render config fields based on section type */}
+              <SectionConfigFields
+                section={section}
+                onChange={(updates) => onSectionChange(section.section_id, updates)}
+                books={books}
+                authors={authors}
+                categories={categories}
+              />
+            </div>
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+}
+
+// Section Config Fields Component with real data
+interface SectionConfigFieldsProps {
+  section: SectionConfig;
+  onChange: (updates: Partial<SectionConfig>) => void;
+  books: Book[];
+  authors: Author[];
+  categories: Category[];
+}
+
+function SectionConfigFields({ section, onChange, books, authors, categories }: SectionConfigFieldsProps) {
+  const config = section.config as Record<string, unknown>;
+
+  const updateConfig = (key: string, value: unknown) => {
+    onChange({
+      config: {
+        ...config,
+        [key]: value,
+      },
+    });
+  };
+
+  if (section.section_id === 'hero') {
     return (
       <div className="space-y-6">
-        {/* Hero Content */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor={`${section.id}-title`}>Hero Title</Label>
-            <Input id={`${section.id}-title`} defaultValue={config.title as string} placeholder="Welcome to Al-Ghazel Bookstore" />
+            <Label htmlFor={`${section.section_id}-title`}>Hero Title</Label>
+            <Input
+              id={`${section.section_id}-title`}
+              value={config.title as string || ''}
+              onChange={(e) => updateConfig('title', e.target.value)}
+              placeholder="Welcome to Al-Ghazel Bookstore"
+            />
           </div>
           <div className="space-y-2">
-            <Label htmlFor={`${section.id}-subtitle`}>Hero Subtitle</Label>
-            <Input id={`${section.id}-subtitle`} defaultValue={config.subtitle as string} placeholder="Discover your next favorite book" />
+            <Label htmlFor={`${section.section_id}-subtitle`}>Hero Subtitle</Label>
+            <Input
+              id={`${section.section_id}-subtitle`}
+              value={config.subtitle as string || ''}
+              onChange={(e) => updateConfig('subtitle', e.target.value)}
+              placeholder="Discover your next favorite book"
+            />
           </div>
           <div className="space-y-2">
-            <Label htmlFor={`${section.id}-cta`}>CTA Button Text</Label>
-            <Input id={`${section.id}-cta`} defaultValue={config.ctaText as string} placeholder="Browse Collection" />
+            <Label htmlFor={`${section.section_id}-cta`}>CTA Button Text</Label>
+            <Input
+              id={`${section.section_id}-cta`}
+              value={config.ctaText as string || ''}
+              onChange={(e) => updateConfig('ctaText', e.target.value)}
+              placeholder="Browse Collection"
+            />
           </div>
           <div className="space-y-2">
-            <Label htmlFor={`${section.id}-link`}>CTA Link</Label>
-            <Input id={`${section.id}-link`} defaultValue={config.ctaLink as string} placeholder="/books" />
+            <Label htmlFor={`${section.section_id}-link`}>CTA Link</Label>
+            <Input
+              id={`${section.section_id}-link`}
+              value={config.ctaLink as string || ''}
+              onChange={(e) => updateConfig('ctaLink', e.target.value)}
+              placeholder="/books"
+            />
           </div>
           <div className="space-y-2 md:col-span-2">
-            <Label htmlFor={`${section.id}-bg`}>Background Image URL</Label>
-            <Input id={`${section.id}-bg`} defaultValue={config.backgroundImage as string} placeholder="/images/hero-bg.jpg" />
+            <Label htmlFor={`${section.section_id}-bg`}>Background Image URL</Label>
+            <Input
+              id={`${section.section_id}-bg`}
+              value={config.backgroundImage as string || ''}
+              onChange={(e) => updateConfig('backgroundImage', e.target.value)}
+              placeholder="/images/hero-bg.jpg"
+            />
           </div>
           <div className="flex items-center justify-between bg-background rounded-lg p-3 border md:col-span-2">
             <div>
-              <Label htmlFor={`${section.id}-overlay`}>Show Dark Overlay</Label>
+              <Label htmlFor={`${section.section_id}-overlay`}>Show Dark Overlay</Label>
               <p className="text-xs text-muted-foreground">Add overlay for better text readability</p>
             </div>
-            <Switch id={`${section.id}-overlay`} defaultChecked={config.showOverlay as boolean} />
+            <Switch
+              id={`${section.section_id}-overlay`}
+              checked={config.showOverlay as boolean}
+              onCheckedChange={(checked) => updateConfig('showOverlay', checked)}
+            />
           </div>
         </div>
       </div>
     );
   }
 
-  if (section.id === 'categories') {
+  if (section.section_id === 'categories') {
+    const selectedIds = (config.selectedCategoryIds as string[]) || [];
+
     return (
       <div className="space-y-6">
-        {/* Section Title */}
         <div className="space-y-2">
-          <Label htmlFor={`${section.id}-title`}>Section Title</Label>
-          <Input id={`${section.id}-title`} defaultValue={config.title as string} placeholder="Browse by Category" />
+          <Label htmlFor={`${section.section_id}-title`}>Section Title</Label>
+          <Input
+            id={`${section.section_id}-title`}
+            value={config.title as string || ''}
+            onChange={(e) => updateConfig('title', e.target.value)}
+            placeholder="Browse by Category"
+          />
         </div>
 
-        {/* Categories Selection */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <Label>Select Categories to Display</Label>
-            <Button variant="outline" size="sm">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => updateConfig('selectedCategoryIds', categories.map((c) => c.id))}
+            >
               <Plus className="h-4 w-4 mr-2" />
               Add All Categories
             </Button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            {['Fiction', 'Non-Fiction', 'Science', 'History', 'Biography', 'Mystery', 'Romance', 'Children'].map((cat) => (
-              <div key={cat} className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer">
-                <Switch id={`cat-${cat}`} defaultChecked={['Fiction', 'Non-Fiction', 'Science', 'History'].includes(cat)} />
-                <Label htmlFor={`cat-${cat}`} className="flex-1 cursor-pointer">{cat}</Label>
-                <span className="text-xs text-muted-foreground">12 books</span>
+            {categories.map((cat) => (
+              <div
+                key={cat.id}
+                className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer"
+                onClick={() => {
+                  if (selectedIds.includes(cat.id)) {
+                    updateConfig('selectedCategoryIds', selectedIds.filter((id) => id !== cat.id));
+                  } else {
+                    updateConfig('selectedCategoryIds', [...selectedIds, cat.id]);
+                  }
+                }}
+              >
+                <Switch
+                  id={`cat-${cat.id}`}
+                  checked={selectedIds.includes(cat.id)}
+                  onCheckedChange={() => {}}
+                />
+                <Label htmlFor={`cat-${cat.id}`} className="flex-1 cursor-pointer">{cat.name}</Label>
+                <span className="text-xs text-muted-foreground">{cat.book_count || 0} books</span>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Display Options */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="flex items-center justify-between bg-background rounded-lg p-3 border">
             <div>
-              <Label htmlFor={`${section.id}-icon`}>Show Category Icons</Label>
+              <Label htmlFor={`${section.section_id}-icon`}>Show Category Icons</Label>
               <p className="text-xs text-muted-foreground">Display emoji/icon for each</p>
             </div>
-            <Switch id={`${section.id}-icon`} defaultChecked={config.showIcon as boolean} />
+            <Switch
+              id={`${section.section_id}-icon`}
+              checked={config.showIcon as boolean}
+              onCheckedChange={(checked) => updateConfig('showIcon', checked)}
+            />
           </div>
           <div className="flex items-center justify-between bg-background rounded-lg p-3 border">
             <div>
-              <Label htmlFor={`${section.id}-count`}>Show Book Counts</Label>
+              <Label htmlFor={`${section.section_id}-count`}>Show Book Counts</Label>
               <p className="text-xs text-muted-foreground">Display number of books</p>
             </div>
-            <Switch id={`${section.id}-count`} defaultChecked={config.showBookCount as boolean} />
+            <Switch
+              id={`${section.section_id}-count`}
+              checked={config.showBookCount as boolean}
+              onCheckedChange={(checked) => updateConfig('showBookCount', checked)}
+            />
           </div>
           <div className="flex items-center justify-between bg-background rounded-lg p-3 border">
             <div>
-              <Label htmlFor={`${section.id}-autoscroll`}>Auto-scroll</Label>
+              <Label htmlFor={`${section.section_id}-autoscroll`}>Auto-scroll</Label>
               <p className="text-xs text-muted-foreground">Automatically scroll</p>
             </div>
-            <Switch id={`${section.id}-autoscroll`} defaultChecked={config.autoScroll as boolean} />
+            <Switch
+              id={`${section.section_id}-autoscroll`}
+              checked={config.autoScroll as boolean}
+              onCheckedChange={(checked) => updateConfig('autoScroll', checked)}
+            />
           </div>
           <div className="space-y-2">
-            <Label htmlFor={`${section.id}-speed`}>Scroll Speed (ms)</Label>
-            <Input id={`${section.id}-speed`} type="number" defaultValue={config.scrollSpeed as number} />
+            <Label htmlFor={`${section.section_id}-speed`}>Scroll Speed (ms)</Label>
+            <Input
+              id={`${section.section_id}-speed`}
+              type="number"
+              value={config.scrollSpeed as number || 3000}
+              onChange={(e) => updateConfig('scrollSpeed', parseInt(e.target.value) || 3000)}
+            />
           </div>
         </div>
       </div>
     );
   }
 
-  if (section.id === 'book-of-the-day') {
+  if (section.section_id === 'book-of-the-day') {
     return (
       <div className="space-y-6">
-        {/* Book Selection */}
         <div className="space-y-3">
           <Label>Select Featured Book</Label>
-          <Select>
-            <SelectTrigger id={`${section.id}-book`}>
+          <Select
+            value={config.bookId as string || ''}
+            onValueChange={(value) => updateConfig('bookId', value)}
+          >
+            <SelectTrigger id={`${section.section_id}-book`}>
               <SelectValue placeholder="Choose a book to feature..." />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="1">The Midnight Library - Matt Haig</SelectItem>
-              <SelectItem value="2">Atomic Habits - James Clear</SelectItem>
-              <SelectItem value="3">The Great Gatsby - F. Scott Fitzgerald</SelectItem>
-              <SelectItem value="4">Project Hail Mary - Andy Weir</SelectItem>
+              {books.map((book) => (
+                <SelectItem key={book.id} value={book.id}>
+                  {book.title} - {book.authors?.name || 'Unknown Author'}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
 
-        {/* Schedule */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor={`${section.id}-date`}>Featured Date</Label>
-            <Input id={`${section.id}-date`} type="date" />
+            <Label htmlFor={`${section.section_id}-date`}>Featured Date</Label>
+            <Input
+              id={`${section.section_id}-date`}
+              type="date"
+              value={config.featuredDate as string || ''}
+              onChange={(e) => updateConfig('featuredDate', e.target.value)}
+            />
           </div>
           <div className="space-y-2">
-            <Label htmlFor={`${section.id}-time`}>Featured Time (optional)</Label>
-            <Input id={`${section.id}-time`} type="time" />
-          </div>
-        </div>
-
-        {/* Description */}
-        <div className="space-y-2">
-          <Label htmlFor={`${section.id}-reason`}>Feature Reason</Label>
-          <Textarea id={`${section.id}-reason`} placeholder="Why this book is special..." rows={3} />
-        </div>
-
-        {/* Display Options */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor={`${section.id}-layout`}>Layout Style</Label>
-            <Select defaultValue={config.layout as string}>
-              <SelectTrigger id={`${section.id}-layout`}>
+            <Label htmlFor={`${section.section_id}-layout`}>Layout Style</Label>
+            <Select
+              value={config.layout as string || 'featured'}
+              onValueChange={(value) => updateConfig('layout', value)}
+            >
+              <SelectTrigger id={`${section.section_id}-layout`}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -383,130 +552,163 @@ function SectionConfigFields({ section }: { section: SectionConfig }) {
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-2">
-            <Label>Display Options</Label>
-            <div className="flex flex-wrap gap-2">
-              <Badge variant="outline" className="cursor-pointer hover:bg-orange-50">Rating</Badge>
-              <Badge variant="outline" className="cursor-pointer hover:bg-orange-50">Price</Badge>
-              <Badge variant="outline" className="cursor-pointer hover:bg-orange-50">Add to Cart</Badge>
-            </div>
-          </div>
         </div>
 
-        {/* Scheduled Books Preview */}
-        <div className="border-t pt-4">
-          <h5 className="font-medium mb-3">Upcoming Schedule</h5>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg text-sm">
-              <div>
-                <span className="font-medium">The Midnight Library</span>
-                <span className="text-muted-foreground ml-2">by Matt Haig</span>
-              </div>
-              <span className="text-muted-foreground">Feb 1, 2024</span>
-            </div>
+        <div className="space-y-2">
+          <Label htmlFor={`${section.section_id}-reason`}>Feature Reason</Label>
+          <Textarea
+            id={`${section.section_id}-reason`}
+            value={config.reason as string || ''}
+            onChange={(e) => updateConfig('reason', e.target.value)}
+            placeholder="Why this book is special..."
+            rows={3}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Display Options</Label>
+          <div className="flex flex-wrap gap-2">
+            <Badge
+              variant={config.showRating ? 'default' : 'outline'}
+              className="cursor-pointer hover:bg-orange-50"
+              onClick={() => updateConfig('showRating', !(config.showRating as boolean))}
+            >
+              Rating
+            </Badge>
+            <Badge
+              variant={config.showPrice ? 'default' : 'outline'}
+              className="cursor-pointer hover:bg-orange-50"
+              onClick={() => updateConfig('showPrice', !(config.showPrice as boolean))}
+            >
+              Price
+            </Badge>
+            <Badge
+              variant={config.showAddToCart ? 'default' : 'outline'}
+              className="cursor-pointer hover:bg-orange-50"
+              onClick={() => updateConfig('showAddToCart', !(config.showAddToCart as boolean))}
+            >
+              Add to Cart
+            </Badge>
           </div>
         </div>
       </div>
     );
   }
 
-  if (section.id === 'author-of-the-day') {
+  if (section.section_id === 'author-of-the-day') {
     return (
       <div className="space-y-6">
-        {/* Author Selection */}
         <div className="space-y-3">
           <Label>Select Featured Author</Label>
-          <Select>
-            <SelectTrigger id={`${section.id}-author`}>
+          <Select
+            value={config.authorId as string || ''}
+            onValueChange={(value) => updateConfig('authorId', value)}
+          >
+            <SelectTrigger id={`${section.section_id}-author`}>
               <SelectValue placeholder="Choose an author to feature..." />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="1">Matt Haig</SelectItem>
-              <SelectItem value="2">James Clear</SelectItem>
-              <SelectItem value="3">F. Scott Fitzgerald</SelectItem>
-              <SelectItem value="4">Andy Weir</SelectItem>
+              {authors.map((author) => (
+                <SelectItem key={author.id} value={author.id}>
+                  {author.name} ({author.book_count || 0} books)
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
 
-        {/* Schedule */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor={`${section.id}-date`}>Featured Date</Label>
-            <Input id={`${section.id}-date`} type="date" />
+            <Label htmlFor={`${section.section_id}-date`}>Featured Date</Label>
+            <Input
+              id={`${section.section_id}-date`}
+              type="date"
+              value={config.featuredDate as string || ''}
+              onChange={(e) => updateConfig('featuredDate', e.target.value)}
+            />
           </div>
           <div className="space-y-2">
-            <Label htmlFor={`${section.id}-time`}>Featured Time (optional)</Label>
-            <Input id={`${section.id}-time`} type="time" />
+            <Label htmlFor={`${section.section_id}-max`}>Max Books to Show</Label>
+            <Input
+              id={`${section.section_id}-max`}
+              type="number"
+              value={config.maxBooks as number || 3}
+              onChange={(e) => updateConfig('maxBooks', parseInt(e.target.value) || 3)}
+              min={1}
+              max={10}
+            />
           </div>
         </div>
 
-        {/* Description */}
         <div className="space-y-2">
-          <Label htmlFor={`${section.id}-reason`}>Feature Reason</Label>
-          <Textarea id={`${section.id}-reason`} placeholder="Why this author is special..." rows={3} />
+          <Label htmlFor={`${section.section_id}-reason`}>Feature Reason</Label>
+          <Textarea
+            id={`${section.section_id}-reason`}
+            value={config.reason as string || ''}
+            onChange={(e) => updateConfig('reason', e.target.value)}
+            placeholder="Why this author is special..."
+            rows={3}
+          />
         </div>
 
-        {/* Books to Showcase */}
-        <div className="space-y-3">
-          <Label>Books to Showcase (max 3)</Label>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="p-3 border rounded-lg hover:border-orange-300 cursor-pointer">
-                <Input placeholder={`Book ${i} title...`} className="border-0 p-0 focus-visible:ring-0" />
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Display Options */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label>Display Options</Label>
-            <div className="flex flex-wrap gap-2">
-              <Badge variant="outline" className="cursor-pointer hover:bg-orange-50">Bio</Badge>
-              <Badge variant="outline" className="cursor-pointer hover:bg-orange-50">Book Count</Badge>
-              <Badge variant="outline" className="cursor-pointer hover:bg-orange-50">Social Links</Badge>
-            </div>
-          </div>
-        </div>
-
-        {/* Scheduled Authors Preview */}
-        <div className="border-t pt-4">
-          <h5 className="font-medium mb-3">Upcoming Schedule</h5>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg text-sm">
-              <div>
-                <span className="font-medium">Matt Haig</span>
-                <span className="text-muted-foreground ml-2">• 5 books</span>
-              </div>
-              <span className="text-muted-foreground">Feb 1, 2024</span>
-            </div>
+        <div className="space-y-2">
+          <Label>Display Options</Label>
+          <div className="flex flex-wrap gap-2">
+            <Badge
+              variant={config.showBio ? 'default' : 'outline'}
+              className="cursor-pointer hover:bg-orange-50"
+              onClick={() => updateConfig('showBio', !(config.showBio as boolean))}
+            >
+              Bio
+            </Badge>
+            <Badge
+              variant={config.showBookCount ? 'default' : 'outline'}
+              className="cursor-pointer hover:bg-orange-50"
+              onClick={() => updateConfig('showBookCount', !(config.showBookCount as boolean))}
+            >
+              Book Count
+            </Badge>
+            <Badge
+              variant={config.showSocialLinks ? 'default' : 'outline'}
+              className="cursor-pointer hover:bg-orange-50"
+              onClick={() => updateConfig('showSocialLinks', !(config.showSocialLinks as boolean))}
+            >
+              Social Links
+            </Badge>
           </div>
         </div>
       </div>
     );
   }
 
-  if (section.id === 'recommended-books') {
+  if (section.section_id === 'recommended-books') {
     return (
       <div className="space-y-6">
-        {/* Section Titles */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor={`${section.id}-title`}>Section Title</Label>
-            <Input id={`${section.id}-title`} defaultValue={config.title as string} />
+            <Label htmlFor={`${section.section_id}-title`}>Section Title</Label>
+            <Input
+              id={`${section.section_id}-title`}
+              value={config.title as string || ''}
+              onChange={(e) => updateConfig('title', e.target.value)}
+            />
           </div>
           <div className="space-y-2">
-            <Label htmlFor={`${section.id}-subtitle`}>Subtitle</Label>
-            <Input id={`${section.id}-subtitle`} defaultValue={config.subtitle as string} />
+            <Label htmlFor={`${section.section_id}-subtitle`}>Subtitle</Label>
+            <Input
+              id={`${section.section_id}-subtitle`}
+              value={config.subtitle as string || ''}
+              onChange={(e) => updateConfig('subtitle', e.target.value)}
+            />
           </div>
         </div>
 
-        {/* Book Selection Source */}
         <div className="space-y-3">
           <Label>Book Selection Source</Label>
-          <Select defaultValue="bestsellers">
+          <Select
+            value={config.source as string || 'bestsellers'}
+            onValueChange={(value) => updateConfig('source', value)}
+          >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
@@ -520,16 +722,25 @@ function SectionConfigFields({ section }: { section: SectionConfig }) {
           </Select>
         </div>
 
-        {/* Number of Books */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor={`${section.id}-count`}>Number of Books</Label>
-            <Input id={`${section.id}-count`} type="number" defaultValue={config.bookCount as number} min={1} max={24} />
+            <Label htmlFor={`${section.section_id}-count`}>Number of Books</Label>
+            <Input
+              id={`${section.section_id}-count`}
+              type="number"
+              value={config.bookCount as number || 6}
+              onChange={(e) => updateConfig('bookCount', parseInt(e.target.value) || 6)}
+              min={1}
+              max={24}
+            />
           </div>
           <div className="space-y-2">
-            <Label htmlFor={`${section.id}-layout`}>Layout</Label>
-            <Select defaultValue={config.layout as string}>
-              <SelectTrigger id={`${section.id}-layout`}>
+            <Label htmlFor={`${section.section_id}-layout`}>Layout</Label>
+            <Select
+              value={config.layout as string || 'grid'}
+              onValueChange={(value) => updateConfig('layout', value)}
+            >
+              <SelectTrigger id={`${section.section_id}-layout`}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -541,62 +752,57 @@ function SectionConfigFields({ section }: { section: SectionConfig }) {
           </div>
         </div>
 
-        {/* Manual Book Selection (shown when source is manual) */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <Label>Manually Selected Books</Label>
-            <Button variant="outline" size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Books
-            </Button>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-            <div className="p-3 border rounded-lg flex items-center gap-3">
-              <div className="h-12 w-8 bg-orange-100 rounded"></div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm truncate">The Midnight Library</p>
-                <p className="text-xs text-muted-foreground truncate">Matt Haig</p>
-              </div>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        {/* Display Options */}
         <div className="space-y-2">
           <Label>Card Display Options</Label>
           <div className="flex flex-wrap gap-2">
-            <Badge variant="outline" className="cursor-pointer hover:bg-orange-50">Rating</Badge>
-            <Badge variant="outline" className="cursor-pointer hover:bg-orange-50">Author</Badge>
-            <Badge variant="outline" className="cursor-pointer hover:bg-orange-50">Price</Badge>
-            <Badge variant="outline" className="cursor-pointer hover:bg-orange-50">Add to Cart</Badge>
+            <Badge
+              variant={config.showRating ? 'default' : 'outline'}
+              className="cursor-pointer hover:bg-orange-50"
+              onClick={() => updateConfig('showRating', !(config.showRating as boolean))}
+            >
+              Rating
+            </Badge>
+            <Badge
+              variant={config.showAuthor ? 'default' : 'outline'}
+              className="cursor-pointer hover:bg-orange-50"
+              onClick={() => updateConfig('showAuthor', !(config.showAuthor as boolean))}
+            >
+              Author
+            </Badge>
           </div>
         </div>
       </div>
     );
   }
 
-  if (section.id === 'for-you') {
+  if (section.section_id === 'for-you') {
     return (
       <div className="space-y-6">
-        {/* Section Titles */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor={`${section.id}-title`}>Section Title</Label>
-            <Input id={`${section.id}-title`} defaultValue={config.title as string} />
+            <Label htmlFor={`${section.section_id}-title`}>Section Title</Label>
+            <Input
+              id={`${section.section_id}-title`}
+              value={config.title as string || ''}
+              onChange={(e) => updateConfig('title', e.target.value)}
+            />
           </div>
           <div className="space-y-2">
-            <Label htmlFor={`${section.id}-subtitle`}>Subtitle</Label>
-            <Input id={`${section.id}-subtitle`} defaultValue={config.subtitle as string} />
+            <Label htmlFor={`${section.section_id}-subtitle`}>Subtitle</Label>
+            <Input
+              id={`${section.section_id}-subtitle`}
+              value={config.subtitle as string || ''}
+              onChange={(e) => updateConfig('subtitle', e.target.value)}
+            />
           </div>
         </div>
 
-        {/* Book Selection Source */}
         <div className="space-y-3">
           <Label>Book Selection Source</Label>
-          <Select defaultValue="new-releases">
+          <Select
+            value={config.source as string || 'new-releases'}
+            onValueChange={(value) => updateConfig('source', value)}
+          >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
@@ -610,57 +816,47 @@ function SectionConfigFields({ section }: { section: SectionConfig }) {
           </Select>
         </div>
 
-        {/* Category Filter (shown when source is category) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor={`${section.id}-category`}>Filter by Category</Label>
-            <Select>
-              <SelectTrigger id={`${section.id}-category`}>
+            <Label htmlFor={`${section.section_id}-category`}>Filter by Category</Label>
+            <Select
+              value={config.categoryId as string || 'all'}
+              onValueChange={(value) => updateConfig('categoryId', value === 'all' ? null : value)}
+            >
+              <SelectTrigger id={`${section.section_id}-category`}>
                 <SelectValue placeholder="All Categories" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Categories</SelectItem>
-                <SelectItem value="fiction">Fiction</SelectItem>
-                <SelectItem value="non-fiction">Non-Fiction</SelectItem>
-                <SelectItem value="science">Science</SelectItem>
+                {categories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor={`${section.id}-count`}>Number of Books</Label>
-            <Input id={`${section.id}-count`} type="number" defaultValue={config.bookCount as number} min={1} max={24} />
+            <Label htmlFor={`${section.section_id}-count`}>Number of Books</Label>
+            <Input
+              id={`${section.section_id}-count`}
+              type="number"
+              value={config.bookCount as number || 12}
+              onChange={(e) => updateConfig('bookCount', parseInt(e.target.value) || 12)}
+              min={1}
+              max={24}
+            />
           </div>
         </div>
 
-        {/* Manual Selection */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <Label>Manually Selected Books</Label>
-            <Button variant="outline" size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Books
-            </Button>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-            <div className="p-3 border rounded-lg flex items-center gap-3">
-              <div className="h-12 w-8 bg-orange-100 rounded"></div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm truncate">Project Hail Mary</p>
-                <p className="text-xs text-muted-foreground truncate">Andy Weir</p>
-              </div>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        {/* Layout & Display */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor={`${section.id}-layout`}>Layout</Label>
-            <Select defaultValue={config.layout as string}>
-              <SelectTrigger id={`${section.id}-layout`}>
+            <Label htmlFor={`${section.section_id}-layout`}>Layout</Label>
+            <Select
+              value={config.layout as string || 'horizontal-scroll'}
+              onValueChange={(value) => updateConfig('layout', value)}
+            >
+              <SelectTrigger id={`${section.section_id}-layout`}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -673,8 +869,20 @@ function SectionConfigFields({ section }: { section: SectionConfig }) {
           <div className="space-y-2">
             <Label>Card Badges</Label>
             <div className="flex flex-wrap gap-2">
-              <Badge variant="outline" className="cursor-pointer hover:bg-orange-50">New Badge</Badge>
-              <Badge variant="outline" className="cursor-pointer hover:bg-orange-50">Discount</Badge>
+              <Badge
+                variant={config.showNewBadge ? 'default' : 'outline'}
+                className="cursor-pointer hover:bg-orange-50"
+                onClick={() => updateConfig('showNewBadge', !(config.showNewBadge as boolean))}
+              >
+                New Badge
+              </Badge>
+              <Badge
+                variant={config.showDiscount ? 'default' : 'outline'}
+                className="cursor-pointer hover:bg-orange-50"
+                onClick={() => updateConfig('showDiscount', !(config.showDiscount as boolean))}
+              >
+                Discount
+              </Badge>
             </div>
           </div>
         </div>
@@ -682,25 +890,34 @@ function SectionConfigFields({ section }: { section: SectionConfig }) {
     );
   }
 
-  if (section.id === 'book-roulette') {
+  if (section.section_id === 'book-roulette') {
     return (
       <div className="space-y-6">
-        {/* Section Titles */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor={`${section.id}-title`}>Section Title</Label>
-            <Input id={`${section.id}-title`} defaultValue={config.title as string} />
+            <Label htmlFor={`${section.section_id}-title`}>Section Title</Label>
+            <Input
+              id={`${section.section_id}-title`}
+              value={config.title as string || ''}
+              onChange={(e) => updateConfig('title', e.target.value)}
+            />
           </div>
           <div className="space-y-2">
-            <Label htmlFor={`${section.id}-desc`}>Description</Label>
-            <Input id={`${section.id}-desc`} defaultValue={config.description as string} />
+            <Label htmlFor={`${section.section_id}-desc`}>Description</Label>
+            <Input
+              id={`${section.section_id}-desc`}
+              value={config.description as string || ''}
+              onChange={(e) => updateConfig('description', e.target.value)}
+            />
           </div>
         </div>
 
-        {/* Book Pool Source */}
         <div className="space-y-3">
           <Label>Book Pool Source</Label>
-          <Select defaultValue="all">
+          <Select
+            value={config.source as string || 'all'}
+            onValueChange={(value) => updateConfig('source', value)}
+          >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
@@ -713,134 +930,119 @@ function SectionConfigFields({ section }: { section: SectionConfig }) {
           </Select>
         </div>
 
-        {/* Category Filter */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-2">
-            <Label htmlFor={`${section.id}-category`}>Filter by Category</Label>
-            <Select>
-              <SelectTrigger id={`${section.id}-category`}>
+            <Label htmlFor={`${section.section_id}-category`}>Filter by Category</Label>
+            <Select
+              value={config.categoryId as string || 'all'}
+              onValueChange={(value) => updateConfig('categoryId', value === 'all' ? null : value)}
+            >
+              <SelectTrigger id={`${section.section_id}-category`}>
                 <SelectValue placeholder="All Categories" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Categories</SelectItem>
-                <SelectItem value="fiction">Fiction</SelectItem>
-                <SelectItem value="mystery">Mystery</SelectItem>
-                <SelectItem value="romance">Romance</SelectItem>
+                {categories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor={`${section.id}-limit`}>Daily Spin Limit</Label>
-            <Input id={`${section.id}-limit`} type="number" defaultValue={config.dailyLimit as number} min={1} max={100} />
+            <Label htmlFor={`${section.section_id}-limit`}>Daily Spin Limit</Label>
+            <Input
+              id={`${section.section_id}-limit`}
+              type="number"
+              value={config.dailyLimit as number || 10}
+              onChange={(e) => updateConfig('dailyLimit', parseInt(e.target.value) || 10)}
+              min={1}
+              max={100}
+            />
           </div>
           <div className="flex items-end">
-            <Switch id={`${section.id}-anim`} defaultChecked={config.showAnimation as boolean} />
-            <Label htmlFor={`${section.id}-anim`} className="ml-2">Animation</Label>
-          </div>
-        </div>
-
-        {/* Manual Book Pool */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <Label>Books in Roulette Pool</Label>
-            <Button variant="outline" size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Books
-            </Button>
-          </div>
-          <p className="text-xs text-muted-foreground">If left empty, all books from the selected source will be used.</p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="p-2 border rounded-lg flex items-center gap-2">
-                <div className="h-10 w-8 bg-orange-100 rounded shrink-0"></div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium truncate">Book Title {i}</p>
-                  <p className="text-xs text-muted-foreground truncate">Author Name</p>
-                </div>
-                <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                  <Trash2 className="h-3 w-3 text-destructive" />
-                </Button>
-              </div>
-            ))}
+            <Switch
+              id={`${section.section_id}-anim`}
+              checked={config.showAnimation as boolean}
+              onCheckedChange={(checked) => updateConfig('showAnimation', checked)}
+            />
+            <Label htmlFor={`${section.section_id}-anim`} className="ml-2">Animation</Label>
           </div>
         </div>
       </div>
     );
   }
 
-  if (section.id === 'search') {
+  if (section.section_id === 'search') {
     return (
       <div className="space-y-6">
-        {/* Section Title */}
         <div className="space-y-2">
-          <Label htmlFor={`${section.id}-title`}>Section Title</Label>
-          <Input id={`${section.id}-title`} defaultValue={config.title as string} />
+          <Label htmlFor={`${section.section_id}-title`}>Section Title</Label>
+          <Input
+            id={`${section.section_id}-title`}
+            value={config.title as string || ''}
+            onChange={(e) => updateConfig('title', e.target.value)}
+          />
         </div>
 
-        {/* Placeholder Text */}
         <div className="space-y-2">
-          <Label htmlFor={`${section.id}-placeholder`}>Search Placeholder</Label>
-          <Input id={`${section.id}-placeholder`} placeholder="Search by title, author, ISBN..." />
+          <Label htmlFor={`${section.section_id}-placeholder`}>Search Placeholder</Label>
+          <Input
+            id={`${section.section_id}-placeholder`}
+            value={config.placeholder as string || ''}
+            onChange={(e) => updateConfig('placeholder', e.target.value)}
+            placeholder="Search by title, author, ISBN..."
+          />
         </div>
 
-        {/* Filter Options */}
         <div className="space-y-3">
           <Label>Available Filters</Label>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="flex items-center justify-between p-3 border rounded-lg">
-              <div className="flex items-center gap-2">
-                <Switch id={`${section.id}-filter-cat`} defaultChecked={config.filterCategories as boolean} />
-                <Label htmlFor={`${section.id}-filter-cat`} className="cursor-pointer">Category</Label>
+            {[
+              { key: 'filterCategories', label: 'Category', defaultKey: 'filterCategories' },
+              { key: 'filterAuthors', label: 'Author', defaultKey: 'filterAuthors' },
+              { key: 'filterPrice', label: 'Price Range', defaultKey: 'filterPrice' },
+              { key: 'filterRating', label: 'Rating', defaultKey: 'filterRating' },
+              { key: 'filterFormat', label: 'Format', defaultKey: 'filterFormat' },
+              { key: 'filterLanguage', label: 'Language', defaultKey: 'filterLanguage' },
+            ].map((filter) => (
+              <div key={filter.key} className="flex items-center justify-between p-3 border rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id={`${section.section_id}-${filter.key}`}
+                    checked={config[filter.key] as boolean}
+                    onCheckedChange={(checked) => updateConfig(filter.key, checked)}
+                  />
+                  <Label htmlFor={`${section.section_id}-${filter.key}`} className="cursor-pointer">{filter.label}</Label>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center justify-between p-3 border rounded-lg">
-              <div className="flex items-center gap-2">
-                <Switch id={`${section.id}-filter-auth`} defaultChecked={config.filterAuthors as boolean} />
-                <Label htmlFor={`${section.id}-filter-auth`} className="cursor-pointer">Author</Label>
-              </div>
-            </div>
-            <div className="flex items-center justify-between p-3 border rounded-lg">
-              <div className="flex items-center gap-2">
-                <Switch id={`${section.id}-filter-price`} defaultChecked={config.filterPrice as boolean} />
-                <Label htmlFor={`${section.id}-filter-price`} className="cursor-pointer">Price Range</Label>
-              </div>
-            </div>
-            <div className="flex items-center justify-between p-3 border rounded-lg">
-              <div className="flex items-center gap-2">
-                <Switch id={`${section.id}-filter-rating`} defaultChecked={true} />
-                <Label htmlFor={`${section.id}-filter-rating`} className="cursor-pointer">Rating</Label>
-              </div>
-            </div>
-            <div className="flex items-center justify-between p-3 border rounded-lg">
-              <div className="flex items-center gap-2">
-                <Switch id={`${section.id}-filter-format`} defaultChecked={true} />
-                <Label htmlFor={`${section.id}-filter-format`} className="cursor-pointer">Format</Label>
-              </div>
-            </div>
-            <div className="flex items-center justify-between p-3 border rounded-lg">
-              <div className="flex items-center gap-2">
-                <Switch id={`${section.id}-filter-lang`} defaultChecked={true} />
-                <Label htmlFor={`${section.id}-filter-lang`} className="cursor-pointer">Language</Label>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 
-        {/* Other Options */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="flex items-center justify-between bg-background rounded-lg p-3 border">
             <div>
-              <Label htmlFor={`${section.id}-filters`}>Show Filters Panel</Label>
+              <Label htmlFor={`${section.section_id}-filters`}>Show Filters Panel</Label>
               <p className="text-xs text-muted-foreground">Display filter options by default</p>
             </div>
-            <Switch id={`${section.id}-filters`} defaultChecked={config.showFilters as boolean} />
+            <Switch
+              id={`${section.section_id}-filters`}
+              checked={config.showFilters as boolean}
+              onCheckedChange={(checked) => updateConfig('showFilters', checked)}
+            />
           </div>
           <div className="flex items-center justify-between bg-background rounded-lg p-3 border">
             <div>
-              <Label htmlFor={`${section.id}-suggestions`}>Show Suggestions</Label>
+              <Label htmlFor={`${section.section_id}-suggestions`}>Show Suggestions</Label>
               <p className="text-xs text-muted-foreground">Auto-complete suggestions</p>
             </div>
-            <Switch id={`${section.id}-suggestions`} defaultChecked={config.showSuggestions as boolean} />
+            <Switch
+              id={`${section.section_id}-suggestions`}
+              checked={config.showSuggestions as boolean}
+              onCheckedChange={(checked) => updateConfig('showSuggestions', checked)}
+            />
           </div>
         </div>
       </div>
@@ -854,67 +1056,211 @@ function SectionConfigFields({ section }: { section: SectionConfig }) {
   );
 }
 
-export default function AdminSettingsPage() {
+// Coupon Table Columns
+const couponColumns = [
+  {
+    accessorKey: 'code',
+    header: 'Code',
+    cell: ({ row }: any) => <span className="font-mono font-medium">{row.getValue('code')}</span>,
+  },
+  {
+    accessorKey: 'discountType',
+    header: 'Type',
+    cell: ({ row }: any) => (
+      <Badge variant="outline" className="capitalize">{row.getValue('discountType')}</Badge>
+    ),
+  },
+  {
+    accessorKey: 'discountValue',
+    header: 'Discount',
+    cell: ({ row }: any) => {
+      const coupon = row.original;
+      return (
+        <span className="font-medium">
+          {coupon.discountType === 'percentage' ? `${coupon.discountValue}%` : `$${coupon.discountValue}`}
+        </span>
+      );
+    },
+  },
+  {
+    accessorKey: 'usedCount',
+    header: 'Used',
+    cell: ({ row }: any) => {
+      const coupon = row.original;
+      return (
+        <span>{coupon.usedCount}/{coupon.usageLimit}</span>
+      );
+    },
+  },
+  {
+    accessorKey: 'validUntil',
+    header: 'Valid Until',
+    cell: ({ row }: any) => <span>{format(row.getValue('validUntil'), 'MMM d, yyyy')}</span>,
+  },
+  {
+    accessorKey: 'isActive',
+    header: 'Status',
+    cell: ({ row }: any) => (
+      <Badge className={cn(row.getValue('isActive') ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800')}>
+        {row.getValue('isActive') ? 'Active' : 'Inactive'}
+      </Badge>
+    ),
+  },
+];
+
+function AdminSettingsPage() {
   const [activeTab, setActiveTab] = useState('homepage');
-  const [searchParams] = useState(new URLSearchParams());
-  const initialTab = searchParams.get('tab') || 'homepage';
   const [isCouponModalOpen, setIsCouponModalOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<{ type: 'idle' | 'success' | 'error'; message: string }>({
+    type: 'idle',
+    message: '',
+  });
 
   // Homepage sections state
-  const [sections, setSections] = useState<SectionConfig[]>(homepageSections);
+  const [sections, setSections] = useState<SectionConfig[]>([]);
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
+  const [originalSections, setOriginalSections] = useState<SectionConfig[]>([]);
 
-  // Coupon Table Columns
-  const couponColumns = [
-    {
-      accessorKey: 'code',
-      header: 'Code',
-      cell: ({ row }: any) => <span className="font-mono font-medium">{row.getValue('code')}</span>,
-    },
-    {
-      accessorKey: 'discountType',
-      header: 'Type',
-      cell: ({ row }: any) => (
-        <Badge variant="outline" className="capitalize">{row.getValue('discountType')}</Badge>
-      ),
-    },
-    {
-      accessorKey: 'discountValue',
-      header: 'Discount',
-      cell: ({ row }: any) => {
-        const coupon = row.original;
-        return (
-          <span className="font-medium">
-            {coupon.discountType === 'percentage' ? `${coupon.discountValue}%` : `$${coupon.discountValue}`}
-          </span>
-        );
-      },
-    },
-    {
-      accessorKey: 'usedCount',
-      header: 'Used',
-      cell: ({ row }: any) => {
-        const coupon = row.original;
-        return (
-          <span>{coupon.usedCount}/{coupon.usageLimit}</span>
-        );
-      },
-    },
-    {
-      accessorKey: 'validUntil',
-      header: 'Valid Until',
-      cell: ({ row }: any) => <span>{format(row.getValue('validUntil'), 'MMM d, yyyy')}</span>,
-    },
-    {
-      accessorKey: 'isActive',
-      header: 'Status',
-      cell: ({ row }: any) => (
-        <Badge className={cn(row.getValue('isActive') ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800')}>
-          {row.getValue('isActive') ? 'Active' : 'Inactive'}
-        </Badge>
-      ),
-    },
-  ];
+  // Real data state
+  const [books, setBooks] = useState<Book[]>([]);
+  const [authors, setAuthors] = useState<Author[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoadingData, setIsLoadingData] = useState(true);
+
+  // Fetch homepage configuration
+  const fetchHomepageConfig = useCallback(async () => {
+    try {
+      const response = await fetch('/api/homepage-config');
+      const result = await response.json();
+
+      if (result.data) {
+        const formatted = result.data.map((s: any) => ({
+          id: s.id,
+          section_id: s.section_id,
+          section_title: s.section_title,
+          section_description: s.section_description,
+          enabled: s.enabled,
+          order: s.display_order,
+          config: s.config,
+        }));
+        setSections(formatted);
+        setOriginalSections(JSON.parse(JSON.stringify(formatted)));
+      }
+    } catch (error) {
+      console.error('Failed to fetch homepage config:', error);
+    }
+  }, []);
+
+  // Fetch books, authors, categories
+  const fetchReferenceData = useCallback(async () => {
+    setIsLoadingData(true);
+    try {
+      const [booksRes, authorsRes, categoriesRes] = await Promise.all([
+        fetch('/api/books'),
+        fetch('/api/authors'),
+        fetch('/api/categories'),
+      ]);
+
+      const [booksData, authorsData, categoriesData] = await Promise.all([
+        booksRes.json(),
+        authorsRes.json(),
+        categoriesRes.json(),
+      ]);
+
+      if (booksData.data) setBooks(booksData.data);
+      if (authorsData.data) setAuthors(authorsData.data);
+      if (categoriesData.data) setCategories(categoriesData.data);
+    } catch (error) {
+      console.error('Failed to fetch reference data:', error);
+    } finally {
+      setIsLoadingData(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'homepage') {
+      fetchHomepageConfig();
+      fetchReferenceData();
+    }
+  }, [activeTab, fetchHomepageConfig, fetchReferenceData]);
+
+  // Check for unsaved changes
+  useEffect(() => {
+    const hasChanges = JSON.stringify(sections) !== JSON.stringify(originalSections);
+    setHasUnsavedChanges(hasChanges);
+  }, [sections, originalSections]);
+
+  // Move section (for drag and drop)
+  const moveSection = useCallback((dragIndex: number, hoverIndex: number) => {
+    setSections((prevSections) => {
+      const newSections = [...prevSections];
+      const [draggedSection] = newSections.splice(dragIndex, 1);
+
+      if (!draggedSection) {
+        return prevSections;
+      }
+
+      newSections.splice(hoverIndex, 0, draggedSection);
+
+      // Update order values
+      return newSections.map((section, index) => ({
+        ...section,
+        order: index + 1,
+      }));
+    });
+  }, []);
+
+  // Handle section change
+  const handleSectionChange = useCallback((sectionId: string, updates: Partial<SectionConfig>) => {
+    setSections((prev) =>
+      prev.map((section) =>
+        section.section_id === sectionId ? { ...section, ...updates } : section
+      )
+    );
+  }, []);
+
+  // Save all changes
+  const saveAllChanges = async () => {
+    setIsSaving(true);
+    setSaveStatus({ type: 'idle', message: '' });
+
+    try {
+      const response = await fetch('/api/homepage-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sections: sections.map((s) => ({
+            section_id: s.section_id,
+            enabled: s.enabled,
+            display_order: s.order,
+            config: s.config,
+          })),
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        setOriginalSections(JSON.parse(JSON.stringify(sections)));
+        setSaveStatus({ type: 'success', message: 'Homepage layout saved successfully!' });
+      } else {
+        setSaveStatus({ type: 'error', message: result.error || 'Failed to save changes' });
+      }
+    } catch (error) {
+      setSaveStatus({ type: 'error', message: 'Network error while saving' });
+    } finally {
+      setIsSaving(false);
+      setTimeout(() => {
+        setSaveDialogOpen(false);
+        if (saveStatus.type === 'success') {
+          setSaveStatus({ type: 'idle', message: '' });
+        }
+      }, 1500);
+    }
+  };
 
   return (
     <PageBody>
@@ -928,7 +1274,7 @@ export default function AdminSettingsPage() {
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue={initialTab} value={activeTab} onValueChange={setActiveTab}>
+        <Tabs defaultValue="homepage" value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6 h-auto">
             <TabsTrigger value="homepage" className="gap-2">
               <LayoutDashboard className="h-4 w-4" />
@@ -968,161 +1314,62 @@ export default function AdminSettingsPage() {
                       Configure the sections that appear on your homepage. Drag to reorder, toggle visibility, and customize each section.
                     </CardDescription>
                   </div>
-                  <Button className="gap-2">
-                    <Save className="h-4 w-4" />
+                  <Button
+                    className="gap-2"
+                    disabled={!hasUnsavedChanges || isSaving}
+                    onClick={() => setSaveDialogOpen(true)}
+                  >
+                    {isSaving ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Save className="h-4 w-4" />
+                    )}
                     Save All Changes
                   </Button>
                 </div>
+                {saveStatus.type !== 'idle' && (
+                  <div className={cn(
+                    'mt-4 p-3 rounded-lg flex items-center gap-2',
+                    saveStatus.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                  )}>
+                    {saveStatus.type === 'success' ? (
+                      <Check className="h-4 w-4" />
+                    ) : (
+                      <AlertCircle className="h-4 w-4" />
+                    )}
+                    <span className="text-sm font-medium">{saveStatus.message}</span>
+                  </div>
+                )}
               </CardHeader>
             </Card>
 
             {/* Sections Grid */}
-            <div className="space-y-4">
-              {sections
-                .sort((a, b) => a.order - b.order)
-                .map((section) => {
-                  const Icon = section.icon;
-                  const isExpanded = expandedSection === section.id;
-
-                  return (
-                    <Card
-                      key={section.id}
-                      className={cn(
-                        'transition-all duration-200',
-                        !section.enabled && 'opacity-60',
-                        isExpanded && 'ring-2 ring-orange-200 dark:ring-orange-800'
-                      )}
-                    >
-                      {/* Section Header */}
-                      <div className="flex items-center gap-4 p-4">
-                        <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab" />
-
-                        {/* Icon */}
-                        <div className={cn(
-                          'flex h-12 w-12 items-center justify-center rounded-xl',
-                          section.enabled
-                            ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400'
-                            : 'bg-muted text-muted-foreground'
-                        )}>
-                          <Icon className="h-6 w-6" />
-                        </div>
-
-                        {/* Info */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-3">
-                            <h3 className="font-semibold text-lg">{section.title}</h3>
-                            <Badge variant={section.enabled ? 'default' : 'secondary'} className="gap-1">
-                              Order {section.order}
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground mt-0.5">{section.description}</p>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex items-center gap-2">
-                          <Switch
-                            checked={section.enabled}
-                            onCheckedChange={(checked) => {
-                              setSections(sections.map(s =>
-                                s.id === section.id ? { ...s, enabled: checked } : s
-                              ));
-                            }}
-                          />
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setExpandedSection(isExpanded ? null : section.id)}
-                          >
-                            {isExpanded ? (
-                              <ChevronUp className="h-4 w-4" />
-                            ) : (
-                              <ChevronDown className="h-4 w-4" />
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-
-                      {/* Expanded Config */}
-                      {isExpanded && (
-                        <div className="border-t bg-muted/30 p-4 space-y-6">
-                          {/* Quick Stats */}
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                            <div className="bg-background rounded-lg p-3 border">
-                              <p className="text-xs text-muted-foreground">Status</p>
-                              <p className="font-medium flex items-center gap-1.5 mt-1">
-                                {section.enabled ? (
-                                  <><Eye className="h-3.5 w-3.5 text-green-600" /><span className="text-green-600">Visible</span></>
-                                ) : (
-                                  <><EyeOff className="h-3.5 w-3.5 text-muted-foreground" /><span>Hidden</span></>
-                                )}
-                              </p>
-                            </div>
-                            <div className="bg-background rounded-lg p-3 border">
-                              <p className="text-xs text-muted-foreground">Position</p>
-                              <p className="font-medium mt-1">{section.order} of {sections.length}</p>
-                            </div>
-                            <div className="bg-background rounded-lg p-3 border">
-                              <p className="text-xs text-muted-foreground">Config Items</p>
-                              <p className="font-medium mt-1">{Object.keys(section.config).length}</p>
-                            </div>
-                            <div className="bg-background rounded-lg p-3 border">
-                              <p className="text-xs text-muted-foreground">Section ID</p>
-                              <p className="font-mono text-sm mt-1">{section.id}</p>
-                            </div>
-                          </div>
-
-                          {/* Configuration Form */}
-                          <div>
-                            <h4 className="font-semibold mb-4 flex items-center gap-2">
-                              <SlidersHorizontal className="h-4 w-4" />
-                              Section Configuration
-                            </h4>
-
-                            {/* Render config fields based on section type */}
-                            <SectionConfigFields section={section} />
-                          </div>
-
-                          {/* Section Actions */}
-                          <div className="flex items-center justify-between pt-4 border-t">
-                            <div className="flex items-center gap-2">
-                              <Button variant="outline" size="sm">
-                                <Eye className="h-4 w-4 mr-2" />
-                                Preview
-                              </Button>
-                              <Button variant="outline" size="sm">
-                                Reset to Default
-                              </Button>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Button variant="ghost" size="sm" className="text-destructive">
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Reset Section
-                              </Button>
-                              <Button size="sm">
-                                <Save className="h-4 w-4 mr-2" />
-                                Save Config
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </Card>
-                  );
-                })}
-            </div>
-
-            {/* Add Section Button */}
-            <Card className="border-dashed">
-              <CardContent className="flex flex-col items-center justify-center py-8">
-                <Button variant="ghost" className="gap-2">
-                  <Plus className="h-5 w-5" />
-                  Add New Section
-                </Button>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Create custom sections or add from templates
-                </p>
-              </CardContent>
-            </Card>
+            <DndProvider backend={HTML5Backend}>
+              <div className="space-y-4">
+                {isLoadingData ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (
+                  sections
+                    .sort((a, b) => a.order - b.order)
+                    .map((section, index) => (
+                      <DraggableSectionCard
+                        key={section.section_id}
+                        section={section}
+                        index={index}
+                        moveSection={moveSection}
+                        expandedSection={expandedSection}
+                        setExpandedSection={setExpandedSection}
+                        onSectionChange={handleSectionChange}
+                        books={books}
+                        authors={authors}
+                        categories={categories}
+                      />
+                    ))
+                )}
+              </div>
+            </DndProvider>
           </TabsContent>
 
           {/* Recommendations Tab */}
@@ -1197,9 +1444,11 @@ export default function AdminSettingsPage() {
                       <SelectValue placeholder="Choose a book..." />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="1">The Midnight Library</SelectItem>
-                      <SelectItem value="2">Atomic Habits</SelectItem>
-                      <SelectItem value="3">The Great Gatsby</SelectItem>
+                      {books.slice(0, 5).map((book) => (
+                        <SelectItem key={book.id} value={book.id}>
+                          {book.title}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -1251,9 +1500,11 @@ export default function AdminSettingsPage() {
                       <SelectValue placeholder="Choose an author..." />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="1">Matt Haig</SelectItem>
-                      <SelectItem value="2">James Clear</SelectItem>
-                      <SelectItem value="3">F. Scott Fitzgerald</SelectItem>
+                      {authors.slice(0, 5).map((author) => (
+                        <SelectItem key={author.id} value={author.id}>
+                          {author.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -1310,9 +1561,7 @@ export default function AdminSettingsPage() {
                   selectable={true}
                   pagination={true}
                   pageSize={10}
-                  onRowClick={(coupon) => {
-                    // Open coupon edit modal
-                  }}
+                  onRowClick={(coupon) => {}}
                 />
               </CardContent>
             </Card>
@@ -1364,6 +1613,38 @@ export default function AdminSettingsPage() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Save Confirmation Dialog */}
+        <AlertDialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Save Homepage Layout?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will save all your changes to the homepage layout configuration. The changes will be immediately visible to all users.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isSaving}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={(e) => {
+                  e.preventDefault();
+                  saveAllChanges();
+                }}
+                disabled={isSaving}
+                className="bg-orange-600 hover:bg-orange-700"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  'Save Changes'
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {/* Coupon Edit Modal */}
         <Dialog open={isCouponModalOpen} onOpenChange={setIsCouponModalOpen}>
@@ -1429,3 +1710,5 @@ export default function AdminSettingsPage() {
     </PageBody>
   );
 }
+
+export default AdminSettingsPage;

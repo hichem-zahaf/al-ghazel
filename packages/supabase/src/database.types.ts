@@ -441,6 +441,53 @@ export type Database = {
         }
         Relationships: []
       }
+      homepage_config: {
+        Row: {
+          config: Json | null
+          created_at: string | null
+          display_order: number
+          enabled: boolean | null
+          id: string
+          section_description: string | null
+          section_id: string
+          section_title: string
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          config?: Json | null
+          created_at?: string | null
+          display_order?: number
+          enabled?: boolean | null
+          id?: string
+          section_description?: string | null
+          section_id: string
+          section_title: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          config?: Json | null
+          created_at?: string | null
+          display_order?: number
+          enabled?: boolean | null
+          id?: string
+          section_description?: string | null
+          section_id?: string
+          section_title?: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "homepage_config_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           book_id: string
