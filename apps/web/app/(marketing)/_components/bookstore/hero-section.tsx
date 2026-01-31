@@ -91,9 +91,11 @@ export function HeroSection({ featuredAuthor, featuredBooks = [] }: HeroSectionP
                     <h3 className="text-sm font-semibold text-orange mb-1">
                       Featured Author
                     </h3>
-                    <h2 className="text-2xl font-bold text-black dark:text-beige mb-2">
-                      {featuredAuthor.name}
-                    </h2>
+                    <Link href={`/authors/${featuredAuthor.id}`}>
+                      <h2 className="text-2xl font-bold text-black dark:text-beige mb-2 hover:text-orange transition-colors cursor-pointer">
+                        {featuredAuthor.name}
+                      </h2>
+                    </Link>
                     <p className="text-muted-foreground mb-4 line-clamp-2">
                       {featuredAuthor.bio}
                     </p>

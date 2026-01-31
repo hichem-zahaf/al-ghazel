@@ -57,9 +57,11 @@ function MercuryLayout({ author, reason, featuredBooks }: { author: AuthorOfTheD
               />
             </div>
 
-            <h2 className="text-3xl font-bold text-black dark:text-beige mb-2">
-              {author.name}
-            </h2>
+            <Link href={`/authors/${author.id}`}>
+              <h2 className="text-3xl font-bold text-black dark:text-beige mb-2 hover:text-orange transition-colors cursor-pointer">
+                {author.name}
+              </h2>
+            </Link>
 
             <div className="bg-beige-light dark:bg-neutral-800 rounded-lg p-6 mb-6">
               <h3 className="font-semibold text-black dark:text-beige mb-3">About</h3>
@@ -173,7 +175,11 @@ function VenusLayout({ author, reason, featuredBooks }: { author: AuthorOfTheDay
               </div>
             </div>
 
-            <h3 className="text-3xl font-bold text-neutral-900 dark:text-neutral-50 mb-3">{author.name}</h3>
+            <Link href={`/authors/${author.id}`}>
+              <h3 className="text-3xl font-bold text-neutral-900 dark:text-neutral-50 mb-3 hover:text-orange transition-colors cursor-pointer">
+                {author.name}
+              </h3>
+            </Link>
 
             <div className="bg-white/70 dark:bg-neutral-800/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-orange-100 dark:border-orange-900/30 mb-6">
               <p className="text-neutral-700 dark:text-neutral-300 italic leading-relaxed">"{reason}"</p>
@@ -254,9 +260,11 @@ function MarsLayout({ author, reason, featuredBooks }: { author: AuthorOfTheDayT
               <Badge className="mb-3 bg-white/10 backdrop-blur-sm text-orange-300 border border-orange-400/30">
                 Author of the Day
               </Badge>
-              <h2 className="text-2xl md:text-3xl font-bold mb-2 bg-gradient-to-r from-white to-orange-200 bg-clip-text text-transparent">
-                {author.name}
-              </h2>
+              <Link href={`/authors/${author.id}`}>
+                <h2 className="text-2xl md:text-3xl font-bold mb-2 bg-gradient-to-r from-white to-orange-200 bg-clip-text text-transparent hover:from-orange-200 hover:to-white transition-all cursor-pointer">
+                  {author.name}
+                </h2>
+              </Link>
             </div>
 
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-5 mt-6 border border-white/10">
@@ -338,9 +346,11 @@ function JupiterLayout({ author, reason, featuredBooks }: { author: AuthorOfTheD
             <Sparkles className="w-4 h-4 mr-1 inline" />
             Featured Author
           </Badge>
-          <h2 className="text-4xl md:text-5xl font-bold text-neutral-900 dark:text-neutral-50 mb-2">
-            {author.name}
-          </h2>
+          <Link href={`/authors/${author.id}`}>
+            <h2 className="text-4xl md:text-5xl font-bold text-neutral-900 dark:text-neutral-50 mb-2 hover:text-orange transition-colors cursor-pointer">
+              {author.name}
+            </h2>
+          </Link>
         </div>
 
         <div className="flex flex-col lg:flex-row gap-12 items-center justify-center">
