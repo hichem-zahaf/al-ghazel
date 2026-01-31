@@ -66,7 +66,9 @@ INSERT INTO public.homepage_config (section_id, section_title, section_descripti
       "ctaText": "Browse Collection",
       "ctaLink": "/books",
       "backgroundImage": "/images/hero-bg.jpg",
-      "showOverlay": true
+      "showOverlay": true,
+      "featuredAuthorId": null,
+      "autoRotateAuthor": true
     }'::JSONB
   ),
   (

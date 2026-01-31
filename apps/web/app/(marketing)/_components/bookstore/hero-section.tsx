@@ -17,10 +17,9 @@ import {
 import { cn } from '@kit/ui/utils';
 import Image from 'next/image';
 import Link from 'next/link';
-import { mockBooks } from '../../../../data/mock-books';
-import { mockAuthors } from '../../../../data/mock-authors';
 import { BookCarousel } from './book-carousel';
 import { GridBackground } from './grid-background';
+import type { Author, Book } from '../../../../types/bookstore';
 
 const navigationItems = [
   { icon: HomeIcon, label: 'Home', href: '#' },
@@ -32,10 +31,12 @@ const navigationItems = [
   { icon: TagIcon, label: 'Sale', href: '#sale' }
 ];
 
-export function HeroSection() {
-  const featuredAuthor = mockAuthors[0]!;
-  const featuredBooks = mockBooks.slice(0, 6);
+interface HeroSectionProps {
+  featuredAuthor?: Author | null;
+  featuredBooks?: Book[];
+}
 
+export function HeroSection({ featuredAuthor, featuredBooks = [] }: HeroSectionProps) {
   return (
     <section className="relative min-h-[80vh] bg-background overflow-hidden">
       <GridBackground />
@@ -72,44 +73,48 @@ export function HeroSection() {
             </div>
 
             {/* Author Profile Card */}
-            <div className="mb-12 p-6 bg-white dark:bg-card rounded-2xl shadow-sm border-l-4 border-orange">
-              <div className="flex items-start gap-6">
-                <div className="relative w-24 h-24 flex-shrink-0">
-                  <Image
-                    src={featuredAuthor.avatar}
-                    alt={featuredAuthor.name}
-                    fill
-                    className="rounded-full object-cover"
-                    sizes="96px"
-                  />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-sm font-semibold text-orange mb-1">
-                    Featured Author
-                  </h3>
-                  <h2 className="text-2xl font-bold text-black dark:text-beige mb-2">
-                    {featuredAuthor.name}
-                  </h2>
-                  <p className="text-muted-foreground mb-4 line-clamp-2">
-                    {featuredAuthor.bio}
-                  </p>
-                  <Link
-                    href="#"
-                    className="text-sm font-semibold text-black dark:text-beige hover:text-orange transition-colors inline-flex items-center gap-1"
-                  >
-                    View all books →
-                  </Link>
+            {featuredAuthor && (
+              <div className="mb-12 p-6 bg-white dark:bg-card rounded-2xl shadow-sm border-l-4 border-orange">
+                <div className="flex items-start gap-6">
+                  <div className="relative w-24 h-24 flex-shrink-0">
+                    <Image
+                      src={featuredAuthor.avatar}
+                      alt={featuredAuthor.name}
+                      fill
+                      className="rounded-full object-cover"
+                      sizes="96px"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-sm font-semibold text-orange mb-1">
+                      Featured Author
+                    </h3>
+                    <h2 className="text-2xl font-bold text-black dark:text-beige mb-2">
+                      {featuredAuthor.name}
+                    </h2>
+                    <p className="text-muted-foreground mb-4 line-clamp-2">
+                      {featuredAuthor.bio}
+                    </p>
+                    <Link
+                      href={`/authors/${featuredAuthor.id}`}
+                      className="text-sm font-semibold text-black dark:text-beige hover:text-orange transition-colors inline-flex items-center gap-1"
+                    >
+                      View all books →
+                    </Link>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Featured Books Carousel */}
-            <div>
-              <h2 className="text-2xl font-bold text-black dark:text-beige mb-6">
-                Trending This Week
-              </h2>
-              <BookCarousel books={featuredBooks} />
-            </div>
+            {featuredBooks.length > 0 && (
+              <div>
+                <h2 className="text-2xl font-bold text-black dark:text-beige mb-6">
+                  Trending This Week
+                </h2>
+                <BookCarousel books={featuredBooks} />
+              </div>
+            )}
           </div>
         </div>
       </div>

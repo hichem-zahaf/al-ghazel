@@ -342,63 +342,43 @@ function SectionConfigFields({ section, onChange, books, authors, categories }: 
   if (section.section_id === 'hero') {
     return (
       <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor={`${section.section_id}-title`}>Hero Title</Label>
-            <Input
-              id={`${section.section_id}-title`}
-              value={config.title as string || ''}
-              onChange={(e) => updateConfig('title', e.target.value)}
-              placeholder="Welcome to Al-Ghazel Bookstore"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor={`${section.section_id}-subtitle`}>Hero Subtitle</Label>
-            <Input
-              id={`${section.section_id}-subtitle`}
-              value={config.subtitle as string || ''}
-              onChange={(e) => updateConfig('subtitle', e.target.value)}
-              placeholder="Discover your next favorite book"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor={`${section.section_id}-cta`}>CTA Button Text</Label>
-            <Input
-              id={`${section.section_id}-cta`}
-              value={config.ctaText as string || ''}
-              onChange={(e) => updateConfig('ctaText', e.target.value)}
-              placeholder="Browse Collection"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor={`${section.section_id}-link`}>CTA Link</Label>
-            <Input
-              id={`${section.section_id}-link`}
-              value={config.ctaLink as string || ''}
-              onChange={(e) => updateConfig('ctaLink', e.target.value)}
-              placeholder="/books"
-            />
-          </div>
-          <div className="space-y-2 md:col-span-2">
-            <Label htmlFor={`${section.section_id}-bg`}>Background Image URL</Label>
-            <Input
-              id={`${section.section_id}-bg`}
-              value={config.backgroundImage as string || ''}
-              onChange={(e) => updateConfig('backgroundImage', e.target.value)}
-              placeholder="/images/hero-bg.jpg"
-            />
-          </div>
-          <div className="flex items-center justify-between bg-background rounded-lg p-3 border md:col-span-2">
+        {/* Featured Author Selection */}
+        <div className="space-y-4">
+          <h4 className="font-semibold flex items-center gap-2">
+            <User className="h-4 w-4" />
+            Featured Author
+          </h4>
+          <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
             <div>
-              <Label htmlFor={`${section.section_id}-overlay`}>Show Dark Overlay</Label>
-              <p className="text-xs text-muted-foreground">Add overlay for better text readability</p>
+              <Label htmlFor={`${section.section_id}-auto-rotate`}>Enable Author Auto-Rotation</Label>
+              <p className="text-xs text-muted-foreground">Automatically pick a random author each day</p>
             </div>
             <Switch
-              id={`${section.section_id}-overlay`}
-              checked={config.showOverlay as boolean}
-              onCheckedChange={(checked) => updateConfig('showOverlay', checked)}
+              id={`${section.section_id}-auto-rotate`}
+              checked={Boolean(config.autoRotateAuthor)}
+              onCheckedChange={(checked) => updateConfig('autoRotateAuthor', checked)}
             />
           </div>
+          {(!Boolean(config.autoRotateAuthor) || Boolean(config.featuredAuthorId)) && (
+            <div className="space-y-2">
+              <Label htmlFor={`${section.section_id}-author`}>Select Featured Author</Label>
+              <Select
+                value={(config.featuredAuthorId as string) || ''}
+                onValueChange={(value) => updateConfig('featuredAuthorId', value)}
+              >
+                <SelectTrigger id={`${section.section_id}-author`}>
+                  <SelectValue placeholder="Select an author to feature..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {authors.map((author) => (
+                    <SelectItem key={author.id} value={author.id}>
+                      {author.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -420,17 +400,7 @@ function SectionConfigFields({ section, onChange, books, authors, categories }: 
         </div>
 
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <Label>Select Categories to Display</Label>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => updateConfig('selectedCategoryIds', categories.map((c) => c.id))}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add All Categories
-            </Button>
-          </div>
+          <Label>Select Categories to Display</Label>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {categories.map((cat) => (
               <div
@@ -450,54 +420,8 @@ function SectionConfigFields({ section, onChange, books, authors, categories }: 
                   onCheckedChange={() => {}}
                 />
                 <Label htmlFor={`cat-${cat.id}`} className="flex-1 cursor-pointer">{cat.name}</Label>
-                <span className="text-xs text-muted-foreground">{cat.book_count || 0} books</span>
               </div>
             ))}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="flex items-center justify-between bg-background rounded-lg p-3 border">
-            <div>
-              <Label htmlFor={`${section.section_id}-icon`}>Show Category Icons</Label>
-              <p className="text-xs text-muted-foreground">Display emoji/icon for each</p>
-            </div>
-            <Switch
-              id={`${section.section_id}-icon`}
-              checked={config.showIcon as boolean}
-              onCheckedChange={(checked) => updateConfig('showIcon', checked)}
-            />
-          </div>
-          <div className="flex items-center justify-between bg-background rounded-lg p-3 border">
-            <div>
-              <Label htmlFor={`${section.section_id}-count`}>Show Book Counts</Label>
-              <p className="text-xs text-muted-foreground">Display number of books</p>
-            </div>
-            <Switch
-              id={`${section.section_id}-count`}
-              checked={config.showBookCount as boolean}
-              onCheckedChange={(checked) => updateConfig('showBookCount', checked)}
-            />
-          </div>
-          <div className="flex items-center justify-between bg-background rounded-lg p-3 border">
-            <div>
-              <Label htmlFor={`${section.section_id}-autoscroll`}>Auto-scroll</Label>
-              <p className="text-xs text-muted-foreground">Automatically scroll</p>
-            </div>
-            <Switch
-              id={`${section.section_id}-autoscroll`}
-              checked={config.autoScroll as boolean}
-              onCheckedChange={(checked) => updateConfig('autoScroll', checked)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor={`${section.section_id}-speed`}>Scroll Speed (ms)</Label>
-            <Input
-              id={`${section.section_id}-speed`}
-              type="number"
-              value={config.scrollSpeed as number || 3000}
-              onChange={(e) => updateConfig('scrollSpeed', parseInt(e.target.value) || 3000)}
-            />
           </div>
         </div>
       </div>
