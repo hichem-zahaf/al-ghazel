@@ -6,12 +6,14 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Search, X, Percent } from 'lucide-react';
+import { Search, X, ShoppingCart, Check } from 'lucide-react';
 import { cn } from '@kit/ui/utils';
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { Badge } from '@kit/ui/badge';
 import { BookCard } from './book-card';
+import { useCartStore } from '~/lib/store/cart-store';
+import { triggerAddToCartAnimation, showAddToCartToast, isBookInCart } from '~/lib/utils/cart-utils';
 import type { Book, Category, Author } from '../../../../types/bookstore';
 
 interface SearchModalProps {
@@ -31,8 +33,35 @@ export function SearchModal({
 }: SearchModalProps) {
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [addedBookId, setAddedBookId] = useState<string | null>(null);
   const modalRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const addItem = useCartStore((state) => state.addItem);
+
+  const handleAddToCart = (book: Book, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (isBookInCart(book.id)) {
+      // Already in cart, navigate to cart page
+      window.location.href = '/cart';
+      return;
+    }
+
+    // Add to cart via store
+    addItem(book);
+
+    // Trigger animation
+    triggerAddToCartAnimation(book);
+
+    // Show toast notification
+    showAddToCartToast(book);
+
+    // Set added state for visual feedback
+    setAddedBookId(book.id);
+    setTimeout(() => setAddedBookId(null), 2000);
+  };
 
   // Filter books based on query
   const filteredBooks = books.filter((book) => {
@@ -166,27 +195,31 @@ export function SearchModal({
                   {filteredBooks.length} {filteredBooks.length === 1 ? 'result' : 'results'} found
                 </p>
                 <div className="space-y-2">
-                  {filteredBooks.map((book, index) => (
-                    <div
-                      key={book.id}
-                      className={cn(
-                        'transform transition-all duration-300 ease-out cursor-pointer',
-                        'rounded-xl hover:bg-beige-light dark:hover:bg-gray-800',
-                        selectedIndex === index
-                          ? 'bg-beige-light dark:bg-gray-800 scale-[1.02] shadow-md'
-                          : index > selectedIndex
-                          ? 'translate-x-4 opacity-50'
-                          : '-translate-x-4 opacity-50',
-                        'hover:opacity-100 hover:translate-x-0'
-                      )}
-                      onClick={() => {
-                        // Handle book selection
-                        window.location.href = `#book-${book.id}`;
-                        onClose();
-                      }}
-                      onMouseEnter={() => setSelectedIndex(index)}
-                    >
-                      <div className="flex gap-4 p-3">
+                  {filteredBooks.map((book, index) => {
+                    const isInCart = isBookInCart(book.id);
+                    const isAdded = addedBookId === book.id;
+
+                    return (
+                      <div
+                        key={book.id}
+                        className={cn(
+                          'transform transition-all duration-300 ease-out cursor-pointer',
+                          'rounded-xl hover:bg-beige-light dark:hover:bg-gray-800',
+                          selectedIndex === index
+                            ? 'bg-beige-light dark:bg-gray-800 scale-[1.02] shadow-md'
+                            : index > selectedIndex
+                            ? 'translate-x-4 opacity-50'
+                            : '-translate-x-4 opacity-50',
+                          'hover:opacity-100 hover:translate-x-0'
+                        )}
+                        onClick={() => {
+                          // Handle book selection
+                          window.location.href = `#book-${book.id}`;
+                          onClose();
+                        }}
+                        onMouseEnter={() => setSelectedIndex(index)}
+                      >
+                        <div className="flex gap-4 p-3">
                         <div className="relative w-16 h-24 flex-shrink-0 rounded-lg overflow-hidden bg-beige">
                           <img
                             src={book.coverImage}
@@ -231,7 +264,28 @@ export function SearchModal({
                             ))}
                           </div>
                         </div>
-                        <div className="flex items-center justify-center">
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            onClick={(e) => handleAddToCart(book, e)}
+                            className={cn(
+                              'bg-orange hover:bg-orange/90 transition-all duration-300',
+                              'h-8 px-3 text-xs',
+                              (isAdded || isInCart) && 'bg-green-600 hover:bg-green-700'
+                            )}
+                          >
+                            {isAdded || isInCart ? (
+                              <>
+                                <Check className="w-3 h-3 mr-1" />
+                                Added
+                              </>
+                            ) : (
+                              <>
+                                <ShoppingCart className="w-3 h-3 mr-1" />
+                                Add
+                              </>
+                            )}
+                          </Button>
                           <div
                             className={cn(
                               'w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all duration-300',
@@ -245,7 +299,8 @@ export function SearchModal({
                         </div>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
