@@ -7,6 +7,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
+import { useState } from 'react';
 import {
   Star,
   ShoppingCart,
@@ -19,7 +20,7 @@ import {
   Building,
   FileText,
   Package,
-  Check,
+  ArrowRight,
 } from 'lucide-react';
 import { cn } from '@kit/ui/utils';
 import { Button } from '@kit/ui/button';
@@ -28,6 +29,7 @@ import { Separator } from '@kit/ui/separator';
 import { useCartStore } from '~/lib/store/cart-store';
 import { triggerAddToCartAnimation, showAddToCartToast, isBookInCart } from '~/lib/utils/cart-utils';
 import { BookCard } from '~/(marketing)/_components/bookstore/book-card';
+import { CartSheet } from '~/(marketing)/_components/bookstore/cart-sheet';
 import type { Book } from '~/types/bookstore';
 
 interface BookDetailProps {
@@ -69,16 +71,22 @@ function transformBook(book: any): Book {
 
 export function BookDetail({ book, recommendedBooks }: BookDetailProps) {
   const transformedBook = transformBook(book);
-  const [isAdded, setIsAdded] = React.useState(false);
-  const [isWishlisted, setIsWishlisted] = React.useState(false);
+  const [isAdded, setIsAdded] = useState(false);
+  const [isWishlisted, setIsWishlisted] = useState(false);
+  const [isCartOpen, setIsCartOpen] = useState(false);
   const addItem = useCartStore((state) => state.addItem);
+  const items = useCartStore((state) => state.items);
   const isInCart = isBookInCart(transformedBook.id);
+
+  // Check if this specific book is in cart
+  const bookInCart = items.some((item) => item.bookId === transformedBook.id);
 
   const hasDiscount = transformedBook.originalPrice && transformedBook.originalPrice > transformedBook.price;
   const reviewCount = Math.floor(Math.random() * 400) + 100;
 
   const handleAddToCart = () => {
-    if (isInCart) {
+    if (bookInCart) {
+      // Navigate to cart page
       window.location.href = '/cart';
       return;
     }
@@ -143,6 +151,25 @@ export function BookDetail({ book, recommendedBooks }: BookDetailProps) {
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* Floating Cart Button */}
+      <div className="fixed bottom-6 right-6 z-50">
+        <button
+          onClick={() => setIsCartOpen(true)}
+          className="relative flex items-center justify-center w-14 h-14 bg-orange hover:bg-orange/90 text-white rounded-full shadow-lg transition-all hover:scale-110"
+          aria-label="Open cart"
+        >
+          <ShoppingCart className="w-6 h-6" />
+          {items.length > 0 && (
+            <Badge className="absolute -top-1 -right-1 h-6 min-w-6 flex items-center justify-center p-0 text-xs bg-red-500 text-white border-2 border-orange">
+              {items.length > 9 ? '9+' : items.length}
+            </Badge>
+          )}
+        </button>
+      </div>
+
+      {/* Cart Sheet */}
+      <CartSheet isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
+
       {/* Back Button */}
       <div className="container mx-auto px-4 py-6">
         <Link href="/">
@@ -180,14 +207,14 @@ export function BookDetail({ book, recommendedBooks }: BookDetailProps) {
                 <Button
                   className={cn(
                     'w-full h-14 text-lg font-semibold transition-all duration-300',
-                    isAdded || isInCart ? 'bg-green-600 hover:bg-green-700' : 'bg-orange hover:bg-orange/90'
+                    bookInCart ? 'bg-green-600 hover:bg-green-700' : 'bg-orange hover:bg-orange/90'
                   )}
                   onClick={handleAddToCart}
                 >
-                  {isAdded || isInCart ? (
+                  {bookInCart ? (
                     <>
-                      <Check className="mr-2 h-5 w-5" />
-                      In Cart
+                      Proceed to Checkout
+                      <ArrowRight className="ml-2 h-5 w-5" />
                     </>
                   ) : (
                     <>
