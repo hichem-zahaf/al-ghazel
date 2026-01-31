@@ -12,7 +12,8 @@ import {
   UserIcon,
   TrendingUpIcon,
   SparklesIcon,
-  TagIcon
+  TagIcon,
+  SearchIcon
 } from 'lucide-react';
 import { cn } from '@kit/ui/utils';
 import Image from 'next/image';
@@ -28,7 +29,8 @@ const navigationItems = [
   { icon: UserIcon, label: 'Authors', href: '#authors' },
   { icon: TrendingUpIcon, label: 'Bestsellers', href: '#bestsellers' },
   { icon: SparklesIcon, label: 'New Releases', href: '#new-releases' },
-  { icon: TagIcon, label: 'Sale', href: '#sale' }
+  { icon: TagIcon, label: 'Sale', href: '#sale' },
+  { icon: SearchIcon, label: 'Browse Books', href: '#browse-books' }
 ];
 
 interface HeroSectionProps {

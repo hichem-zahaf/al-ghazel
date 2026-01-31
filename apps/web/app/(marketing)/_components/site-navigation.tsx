@@ -37,6 +37,10 @@ const links: Record<
     path: string;
   }
 > = {
+  BrowseBooks: {
+    label: 'Browse Books',
+    path: '/#browse-books',
+  },
   /*
     FAQ: {
       label: 'marketing:faq',

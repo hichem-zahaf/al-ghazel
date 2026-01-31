@@ -782,7 +782,7 @@ export default async function BookstoreHome() {
         </section>
 
         {/* Search Section */}
-        <section className="container mx-auto px-4">
+        <section id="browse-books" className="container mx-auto px-4">
           <SearchSection
             categories={categories}
             authors={authors}

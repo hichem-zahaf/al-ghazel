@@ -86,7 +86,7 @@ export function BookCard({
   if (variant === 'mercury' || (variant === 'default' && isPlanetVariant)) {
     return (
       <Link
-        href="#"
+        href={`/books/${book.id}`}
         className={cn('group', className)}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
@@ -159,7 +159,7 @@ export function BookCard({
   if (variant === 'venus') {
     return (
       <Link
-        href="#"
+        href={`/books/${book.id}`}
         className={cn('group block', className)}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
@@ -254,7 +254,7 @@ export function BookCard({
   if (variant === 'mars') {
     return (
       <Link
-        href="#"
+        href={`/books/${book.id}`}
         className={cn('group block', className)}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
@@ -338,7 +338,7 @@ export function BookCard({
 
     return (
       <Link
-        href="#"
+        href={`/books/${book.id}`}
         className={cn('group', className)}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
@@ -527,7 +527,7 @@ export function BookCard({
   if (variant === 'compact') {
     return (
       <Link
-        href="#"
+        href={`/books/${book.id}`}
         className={cn(
           'flex-shrink-0 w-48',
           className
