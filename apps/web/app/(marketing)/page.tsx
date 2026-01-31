@@ -86,8 +86,10 @@ const defaultConfig: Record<string, Record<string, unknown>> = {
     categoryId: null as string | null,
   },
   search: {
-    title: 'Find Your Perfect Book',
+    title: 'Explore All Books',
     placeholder: 'Search by title, author, ISBN...',
+    layout: 'mercury',
+    pageSize: 12,
     showFilters: true,
     showSuggestions: true,
     filterCategories: true,
@@ -722,6 +724,10 @@ export default async function BookstoreHome() {
   const forYouSubtitle = getConfigValue(homepageConfig, 'for-you', 'subtitle', 'Fresh arrivals tailored to your taste') as string;
   const rouletteTitle = getConfigValue(homepageConfig, 'book-roulette', 'title', 'Feeling Lucky?') as string;
   const rouletteSubtitle = getConfigValue(homepageConfig, 'book-roulette', 'subtitle', 'Spin to discover a random book from our collection') as string;
+  const searchTitle = getConfigValue(homepageConfig, 'search', 'title', 'Explore All Books') as string;
+  const searchPlaceholder = getConfigValue(homepageConfig, 'search', 'placeholder', 'Search by title, author, ISBN...') as string;
+  const searchLayout = getConfigValue(homepageConfig, 'search', 'layout', 'mercury') as 'mercury' | 'venus' | 'mars' | 'jupiter' | 'saturn';
+  const searchPageSize = getConfigValue(homepageConfig, 'search', 'pageSize', 12) as number;
 
   return (
     <div className="min-h-screen bg-background">
@@ -778,9 +784,12 @@ export default async function BookstoreHome() {
         {/* Search Section */}
         <section className="container mx-auto px-4">
           <SearchSection
-            books={allBooks}
             categories={categories}
             authors={authors}
+            title={searchTitle}
+            placeholder={searchPlaceholder}
+            layout={searchLayout}
+            pageSize={searchPageSize}
           />
         </section>
       </div>

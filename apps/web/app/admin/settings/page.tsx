@@ -849,6 +849,40 @@ function SectionConfigFields({ section, onChange, books, authors, categories }: 
           />
         </div>
 
+        <div className="space-y-2">
+          <Label htmlFor={`${section.section_id}-layout`}>Layout Style</Label>
+          <Select
+            value={config.layout as string || 'mercury'}
+            onValueChange={(value) => updateConfig('layout', value)}
+          >
+            <SelectTrigger id={`${section.section_id}-layout`}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="mercury">Mercury</SelectItem>
+              <SelectItem value="venus">Venus</SelectItem>
+              <SelectItem value="mars">Mars</SelectItem>
+              <SelectItem value="jupiter">Jupiter</SelectItem>
+              <SelectItem value="saturn">Saturn</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">Choose the visual layout style for search results</p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor={`${section.section_id}-pageSize`}>Page Size</Label>
+          <Input
+            id={`${section.section_id}-pageSize`}
+            type="number"
+            value={config.pageSize as number || 12}
+            onChange={(e) => updateConfig('pageSize', parseInt(e.target.value) || 12)}
+            min={6}
+            max={48}
+            step={6}
+          />
+          <p className="text-xs text-muted-foreground">Number of results per page (6, 12, 18, 24, 36, or 48)</p>
+        </div>
+
         <div className="space-y-3">
           <Label>Available Filters</Label>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

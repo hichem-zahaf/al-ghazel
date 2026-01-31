@@ -686,6 +686,128 @@ export type Database = {
         }
         Relationships: []
       }
+      user_author_preferences: {
+        Row: {
+          account_id: string
+          author_id: string
+          created_at: string | null
+          id: string
+          interest_level: number | null
+          is_favorite: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          account_id: string
+          author_id: string
+          created_at?: string | null
+          id?: string
+          interest_level?: number | null
+          is_favorite?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          account_id?: string
+          author_id?: string
+          created_at?: string | null
+          id?: string
+          interest_level?: number | null
+          is_favorite?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_author_preferences_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_author_preferences_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "authors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_rating_preferences: {
+        Row: {
+          account_id: string
+          created_at: string | null
+          id: string
+          min_rating: number | null
+          preferred_categories: string[] | null
+          updated_at: string | null
+        }
+        Insert: {
+          account_id: string
+          created_at?: string | null
+          id?: string
+          min_rating?: number | null
+          preferred_categories?: string[] | null
+          updated_at?: string | null
+        }
+        Update: {
+          account_id?: string
+          created_at?: string | null
+          id?: string
+          min_rating?: number | null
+          preferred_categories?: string[] | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_rating_preferences_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: true
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_reading_history: {
+        Row: {
+          account_id: string
+          action_type: string
+          book_id: string
+          created_at: string | null
+          id: string
+          metadata: Json | null
+        }
+        Insert: {
+          account_id: string
+          action_type: string
+          book_id: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+        }
+        Update: {
+          account_id?: string
+          action_type?: string
+          book_id?: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_reading_history_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_reading_history_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "books"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_reviews: {
         Row: {
           account_id: string
@@ -828,6 +950,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_preferred_authors: {
+        Args: { p_account_id: string; p_min_level?: number }
+        Returns: {
+          author_id: string
+        }[]
+      }
+      get_reading_history_by_action: {
+        Args: { p_account_id: string; p_action_type: string }
+        Returns: {
+          book_id: string
+          created_at: string
+        }[]
+      }
       gtrgm_compress: {
         Args: { "": unknown }
         Returns: unknown
@@ -847,6 +982,10 @@ export type Database = {
       gtrgm_out: {
         Args: { "": unknown }
         Returns: unknown
+      }
+      increment_author_interest: {
+        Args: { p_account_id: string; p_amount?: number; p_author_id: string }
+        Returns: undefined
       }
       set_limit: {
         Args: { "": number }

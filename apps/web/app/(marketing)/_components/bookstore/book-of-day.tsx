@@ -20,7 +20,7 @@ interface BookOfTheDayProps {
 
 export function BookOfTheDay({ featured, layout = 'mercury', className }: BookOfTheDayProps) {
   const { book, reason } = featured;
-  const hasDiscount = book.originalPrice && book.originalPrice > book.price;
+  const hasDiscount = Boolean(book.originalPrice && book.originalPrice > book.price);
 
   // Default to mercury if layout is invalid
   const safeLayout = ['mercury', 'venus', 'mars', 'jupiter'].includes(layout) ? layout : 'mercury';
