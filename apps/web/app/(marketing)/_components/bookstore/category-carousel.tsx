@@ -32,7 +32,7 @@ export function CategoryCarousel({
         {categories.map((category) => (
           <Link
             key={category.id}
-            href={`/categories/${category.slug}`}
+            href={`/category/${category.slug}`}
             className="flex-shrink-0 w-40"
           >
             <Card className="group overflow-hidden transition-all hover:shadow-lg hover:-translate-y-1 h-full">
