@@ -794,72 +794,34 @@ function SectionConfigFields({ section, onChange, books, authors, categories }: 
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor={`${section.section_id}-desc`}>Description</Label>
+            <Label htmlFor={`${section.section_id}-desc`}>Subtitle</Label>
             <Input
               id={`${section.section_id}-desc`}
-              value={config.description as string || ''}
-              onChange={(e) => updateConfig('description', e.target.value)}
+              value={config.subtitle as string || ''}
+              onChange={(e) => updateConfig('subtitle', e.target.value)}
             />
           </div>
         </div>
 
-        <div className="space-y-3">
-          <Label>Book Pool Source</Label>
+        <div className="space-y-2">
+          <Label htmlFor={`${section.section_id}-category`}>Category</Label>
           <Select
-            value={config.source as string || 'all'}
-            onValueChange={(value) => updateConfig('source', value)}
+            value={config.categoryId as string || 'all'}
+            onValueChange={(value) => updateConfig('categoryId', value === 'all' ? null : value)}
           >
-            <SelectTrigger>
-              <SelectValue />
+            <SelectTrigger id={`${section.section_id}-category`}>
+              <SelectValue placeholder="All Categories" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Books</SelectItem>
-              <SelectItem value="featured">Featured Books</SelectItem>
-              <SelectItem value="category">By Category</SelectItem>
-              <SelectItem value="manual">Manual Selection</SelectItem>
+              <SelectItem value="all">All Categories</SelectItem>
+              {categories.map((cat) => (
+                <SelectItem key={cat.id} value={cat.id}>
+                  {cat.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor={`${section.section_id}-category`}>Filter by Category</Label>
-            <Select
-              value={config.categoryId as string || 'all'}
-              onValueChange={(value) => updateConfig('categoryId', value === 'all' ? null : value)}
-            >
-              <SelectTrigger id={`${section.section_id}-category`}>
-                <SelectValue placeholder="All Categories" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {categories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor={`${section.section_id}-limit`}>Daily Spin Limit</Label>
-            <Input
-              id={`${section.section_id}-limit`}
-              type="number"
-              value={config.dailyLimit as number || 10}
-              onChange={(e) => updateConfig('dailyLimit', parseInt(e.target.value) || 10)}
-              min={1}
-              max={100}
-            />
-          </div>
-          <div className="flex items-end">
-            <Switch
-              id={`${section.section_id}-anim`}
-              checked={config.showAnimation as boolean}
-              onCheckedChange={(checked) => updateConfig('showAnimation', checked)}
-            />
-            <Label htmlFor={`${section.section_id}-anim`} className="ml-2">Animation</Label>
-          </div>
+          <p className="text-xs text-muted-foreground">Select a category to filter books. If no category is selected, all books will be included.</p>
         </div>
       </div>
     );

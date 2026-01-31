@@ -82,12 +82,8 @@ const defaultConfig: Record<string, Record<string, unknown>> = {
   },
   'book-roulette': {
     title: 'Feeling Lucky?',
-    description: 'Spin to discover a random book from our collection',
-    source: 'all',
+    subtitle: 'Spin to discover a random book from our collection',
     categoryId: null as string | null,
-    selectedBookIds: [] as string[],
-    showAnimation: true,
-    dailyLimit: 10,
   },
   search: {
     title: 'Find Your Perfect Book',
@@ -576,28 +572,19 @@ async function getForYouBooksFromConfig(config: HomepageConfig, allBooks: Book[]
 }
 
 async function getRouletteBooksFromConfig(config: HomepageConfig): Promise<Book[]> {
-  const source = getConfigValue(config, 'book-roulette', 'source', 'all') as string;
   const categoryId = getConfigValue(config, 'book-roulette', 'categoryId', null) as string | null;
-  const selectedBookIds = getConfigValue(config, 'book-roulette', 'selectedBookIds', []) as string[];
 
-  // If manual selection, use selected book IDs
-  if (source === 'manual' && selectedBookIds.length > 0) {
-    return await getBooksByIds(selectedBookIds);
+  // If a category is specified, get random books from that category
+  if (categoryId) {
+    const categoryBooks = await getBooksByCategory(categoryId, 100);
+    // Shuffle to get random selection
+    return categoryBooks.sort(() => Math.random() - 0.5).slice(0, 12);
   }
 
-  // Use source-based selection
-  switch (source) {
-    case 'featured':
-      return await getFeaturedBooks(12);
-    case 'category':
-      if (categoryId) {
-        return await getBooksByCategory(categoryId, 12);
-      }
-      return await getFeaturedBooks(12);
-    case 'all':
-    default:
-      return await getBooksWithDetails(24);
-  }
+  // If no category (all categories selected), get all random books
+  const allBooks = await getBooksWithDetails(200);
+  // Shuffle to get random selection
+  return allBooks.sort(() => Math.random() - 0.5).slice(0, 12);
 }
 
 async function getAuthors(): Promise<Author[]> {
@@ -733,6 +720,8 @@ export default async function BookstoreHome() {
   const recommendedSubtitle = getConfigValue(homepageConfig, 'recommended-books', 'subtitle', 'Handpicked selections based on popularity') as string;
   const forYouTitle = getConfigValue(homepageConfig, 'for-you', 'title', 'New Releases Just for You') as string;
   const forYouSubtitle = getConfigValue(homepageConfig, 'for-you', 'subtitle', 'Fresh arrivals tailored to your taste') as string;
+  const rouletteTitle = getConfigValue(homepageConfig, 'book-roulette', 'title', 'Feeling Lucky?') as string;
+  const rouletteSubtitle = getConfigValue(homepageConfig, 'book-roulette', 'subtitle', 'Spin to discover a random book from our collection') as string;
 
   return (
     <div className="min-h-screen bg-background">
@@ -783,7 +772,7 @@ export default async function BookstoreHome() {
 
         {/* Book Roulette */}
         <section id="sale" className="container mx-auto px-4">
-          <BookRoulette books={rouletteBooks} />
+          <BookRoulette books={rouletteBooks} title={rouletteTitle} subtitle={rouletteSubtitle} />
         </section>
 
         {/* Search Section */}

@@ -22,6 +22,8 @@ import type { Book } from '../../../../types/bookstore';
 interface BookRouletteProps {
   books: Book[];
   className?: string;
+  title?: string;
+  subtitle?: string;
 }
 
 const ROULETTE_COLORS = [
@@ -33,7 +35,7 @@ const ROULETTE_COLORS = [
   '#FFE5B4'  // Peach
 ];
 
-export function BookRoulette({ books, className }: BookRouletteProps) {
+export function BookRoulette({ books, className, title, subtitle }: BookRouletteProps) {
   const [isSpinning, setIsSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
@@ -93,11 +95,10 @@ export function BookRoulette({ books, className }: BookRouletteProps) {
       <div className="container mx-auto px-4 py-16 text-center">
         <div className="mb-8">
           <h2 className="text-4xl font-bold text-black dark:text-beige mb-4">
-            Book Roulette 🎰
+            {title || 'Book Roulette 🎰'}
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Feeling adventurous? Spin the wheel and discover your next random
-            read! You might find a hidden gem.
+            {subtitle || 'Feeling adventurous? Spin the wheel and discover your next random read! You might find a hidden gem.'}
           </p>
         </div>
 
@@ -170,9 +171,7 @@ export function BookRoulette({ books, className }: BookRouletteProps) {
           </div>
 
           {/* Center circle */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 bg-black rounded-full flex items-center justify-center shadow-lg z-10">
-            <Sparkles className="w-8 h-8 text-orange" />
-          </div>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 bg-black rounded-full shadow-lg z-10" />
         </div>
 
         {/* Spin Button */}
