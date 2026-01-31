@@ -766,94 +766,16 @@ function SectionConfigFields({ section, onChange, books, authors, categories }: 
           </div>
         </div>
 
-        <div className="space-y-3">
-          <Label>Book Selection Source</Label>
-          <Select
-            value={config.source as string || 'new-releases'}
-            onValueChange={(value) => updateConfig('source', value)}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="new-releases">New Releases (is_new_release=true)</SelectItem>
-              <SelectItem value="featured">Featured Books</SelectItem>
-              <SelectItem value="personalized">Personalized (user-based)</SelectItem>
-              <SelectItem value="category">By Category</SelectItem>
-              <SelectItem value="manual">Manual Selection</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor={`${section.section_id}-category`}>Filter by Category</Label>
-            <Select
-              value={config.categoryId as string || 'all'}
-              onValueChange={(value) => updateConfig('categoryId', value === 'all' ? null : value)}
-            >
-              <SelectTrigger id={`${section.section_id}-category`}>
-                <SelectValue placeholder="All Categories" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {categories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor={`${section.section_id}-count`}>Number of Books</Label>
-            <Input
-              id={`${section.section_id}-count`}
-              type="number"
-              value={config.bookCount as number || 12}
-              onChange={(e) => updateConfig('bookCount', parseInt(e.target.value) || 12)}
-              min={1}
-              max={24}
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor={`${section.section_id}-layout`}>Layout</Label>
-            <Select
-              value={config.layout as string || 'horizontal-scroll'}
-              onValueChange={(value) => updateConfig('layout', value)}
-            >
-              <SelectTrigger id={`${section.section_id}-layout`}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="grid">Grid</SelectItem>
-                <SelectItem value="horizontal-scroll">Horizontal Scroll</SelectItem>
-                <SelectItem value="list">List</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label>Card Badges</Label>
-            <div className="flex flex-wrap gap-2">
-              <Badge
-                variant={config.showNewBadge ? 'default' : 'outline'}
-                className="cursor-pointer hover:bg-orange-50"
-                onClick={() => updateConfig('showNewBadge', !(config.showNewBadge as boolean))}
-              >
-                New Badge
-              </Badge>
-              <Badge
-                variant={config.showDiscount ? 'default' : 'outline'}
-                className="cursor-pointer hover:bg-orange-50"
-                onClick={() => updateConfig('showDiscount', !(config.showDiscount as boolean))}
-              >
-                Discount
-              </Badge>
-            </div>
-          </div>
+        <div className="space-y-2">
+          <Label htmlFor={`${section.section_id}-count`}>Number of Books</Label>
+          <Input
+            id={`${section.section_id}-count`}
+            type="number"
+            value={config.bookCount as number || 12}
+            onChange={(e) => updateConfig('bookCount', parseInt(e.target.value) || 12)}
+            min={1}
+            max={24}
+          />
         </div>
       </div>
     );
