@@ -67,13 +67,7 @@ const defaultConfig: Record<string, Record<string, unknown>> = {
   'recommended-books': {
     title: 'Recommended for You',
     subtitle: 'Handpicked selections based on popularity',
-    source: 'bestsellers',
-    categoryId: null as string | null,
-    bookCount: 6,
     selectedBookIds: [] as string[],
-    showRating: true,
-    showAuthor: true,
-    layout: 'grid',
   },
   'for-you': {
     title: 'New Releases Just for You',
@@ -539,34 +533,16 @@ async function getAuthorOfTheDayFromConfig(config: HomepageConfig): Promise<Auth
 }
 
 async function getRecommendedBooksFromConfig(config: HomepageConfig, allBooks: Book[]): Promise<Book[]> {
-  const source = getConfigValue(config, 'recommended-books', 'source', 'bestsellers') as string;
-  const categoryId = getConfigValue(config, 'recommended-books', 'categoryId', null) as string | null;
-  const bookCount = getConfigValue(config, 'recommended-books', 'bookCount', 6) as number;
   const selectedBookIds = getConfigValue(config, 'recommended-books', 'selectedBookIds', []) as string[];
 
-  // If manual selection, use selected book IDs
-  if (source === 'manual' && selectedBookIds.length > 0) {
+  // If admin has selected specific books, use those
+  if (selectedBookIds.length > 0) {
     return await getBooksByIds(selectedBookIds);
   }
 
-  // Use source-based selection
-  switch (source) {
-    case 'bestsellers':
-      return await getBestsellers(bookCount);
-    case 'featured':
-      return await getFeaturedBooks(bookCount);
-    case 'new':
-      return await getNewReleases().then(books => books.slice(0, bookCount));
-    case 'highest-rated':
-      return await getHighestRated(bookCount);
-    case 'category':
-      if (categoryId) {
-        return await getBooksByCategory(categoryId, bookCount);
-      }
-      return allBooks.slice(0, bookCount);
-    default:
-      return await getBestsellers(bookCount);
-  }
+  // Fallback to random books (shuffle and take 6)
+  const shuffled = [...allBooks].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, 6);
 }
 
 async function getForYouBooksFromConfig(config: HomepageConfig, allBooks: Book[]): Promise<Book[]> {

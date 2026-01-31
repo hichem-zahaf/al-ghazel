@@ -549,6 +549,35 @@ function SectionConfigFields({ section, onChange, books, authors, categories }: 
   }
 
   if (section.section_id === 'recommended-books') {
+    const selectedBookIds = (config.selectedBookIds as string[]) || [];
+    const [searchQuery, setSearchQuery] = useState('');
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+    // Filter books based on search query (title or author)
+    const filteredBooks = books.filter((book) => {
+      if (!searchQuery) return true;
+      const query = searchQuery.toLowerCase();
+      const titleMatch = book.title.toLowerCase().includes(query);
+      const authorMatch = book.authors?.name?.toLowerCase().includes(query) ?? false;
+      return titleMatch || authorMatch;
+    });
+
+    // Get selected book objects
+    const selectedBooks = books.filter((book) => selectedBookIds.includes(book.id));
+
+    const addBook = (bookId: string) => {
+      if (selectedBookIds.length >= 6) return;
+      if (!selectedBookIds.includes(bookId)) {
+        updateConfig('selectedBookIds', [...selectedBookIds, bookId]);
+      }
+      setSearchQuery('');
+      setIsDropdownOpen(false);
+    };
+
+    const removeBook = (bookId: string) => {
+      updateConfig('selectedBookIds', selectedBookIds.filter((id) => id !== bookId));
+    };
+
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -571,72 +600,145 @@ function SectionConfigFields({ section, onChange, books, authors, categories }: 
         </div>
 
         <div className="space-y-3">
-          <Label>Book Selection Source</Label>
-          <Select
-            value={config.source as string || 'bestsellers'}
-            onValueChange={(value) => updateConfig('source', value)}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="bestsellers">Bestsellers (is_bestseller=true)</SelectItem>
-              <SelectItem value="featured">Featured Books (is_featured=true)</SelectItem>
-              <SelectItem value="new">New Releases (is_new_release=true)</SelectItem>
-              <SelectItem value="highest-rated">Highest Rated</SelectItem>
-              <SelectItem value="manual">Manual Selection</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+          <div className="flex items-center justify-between">
+            <Label>Select Books (Max 6)</Label>
+            <Badge variant="outline">{selectedBookIds.length}/6</Badge>
+          </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor={`${section.section_id}-count`}>Number of Books</Label>
-            <Input
-              id={`${section.section_id}-count`}
-              type="number"
-              value={config.bookCount as number || 6}
-              onChange={(e) => updateConfig('bookCount', parseInt(e.target.value) || 6)}
-              min={1}
-              max={24}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor={`${section.section_id}-layout`}>Layout</Label>
-            <Select
-              value={config.layout as string || 'grid'}
-              onValueChange={(value) => updateConfig('layout', value)}
-            >
-              <SelectTrigger id={`${section.section_id}-layout`}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="grid">Grid</SelectItem>
-                <SelectItem value="horizontal-scroll">Horizontal Scroll</SelectItem>
-                <SelectItem value="list">List</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+          {/* Search and Add Books */}
+          <div className="relative">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by title or author..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setIsDropdownOpen(true);
+                }}
+                onFocus={() => setIsDropdownOpen(true)}
+                className="pl-9"
+              />
+            </div>
 
-        <div className="space-y-2">
-          <Label>Card Display Options</Label>
-          <div className="flex flex-wrap gap-2">
-            <Badge
-              variant={config.showRating ? 'default' : 'outline'}
-              className="cursor-pointer hover:bg-orange-50"
-              onClick={() => updateConfig('showRating', !(config.showRating as boolean))}
-            >
-              Rating
-            </Badge>
-            <Badge
-              variant={config.showAuthor ? 'default' : 'outline'}
-              className="cursor-pointer hover:bg-orange-50"
-              onClick={() => updateConfig('showAuthor', !(config.showAuthor as boolean))}
-            >
-              Author
-            </Badge>
+            {/* Dropdown */}
+            {isDropdownOpen && searchQuery && (
+              <div className="absolute z-10 mt-1 w-full bg-background border rounded-lg shadow-lg max-h-60 overflow-auto">
+                {filteredBooks.length === 0 ? (
+                  <div className="p-4 text-sm text-muted-foreground text-center">
+                    No books found
+                  </div>
+                ) : (
+                  filteredBooks.map((book) => {
+                    const isSelected = selectedBookIds.includes(book.id);
+                    return (
+                      <div
+                        key={book.id}
+                        className={`p-3 border-b last:border-b-0 cursor-pointer transition-colors ${
+                          isSelected
+                            ? 'bg-muted/50 opacity-50 cursor-not-allowed'
+                            : 'hover:bg-muted/50'
+                        }`}
+                        onClick={() => !isSelected && addBook(book.id)}
+                      >
+                        <div className="flex items-center gap-3">
+                          {book.cover_image_url && (
+                            <img
+                              src={book.cover_image_url}
+                              alt={book.title}
+                              className="w-10 h-14 object-cover rounded"
+                            />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium truncate">{book.title}</p>
+                            <p className="text-sm text-muted-foreground truncate">
+                              {book.authors?.name || 'Unknown Author'}
+                            </p>
+                          </div>
+                          {isSelected && (
+                            <Check className="h-4 w-4 text-green-600 shrink-0" />
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
           </div>
+
+          {/* Selected Books List */}
+          {selectedBooks.length > 0 && (
+            <div className="space-y-2">
+              <Label className="text-sm text-muted-foreground">Selected Books</Label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {selectedBooks.map((book) => (
+                  <div
+                    key={book.id}
+                    className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg group"
+                  >
+                    {book.cover_image_url && (
+                      <img
+                        src={book.cover_image_url}
+                        alt={book.title}
+                        className="w-10 h-14 object-cover rounded"
+                      />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">{book.title}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {book.authors?.name || 'Unknown Author'}
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => removeBook(book.id)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Quick Select from List */}
+          {selectedBookIds.length < 6 && !searchQuery && (
+            <details className="group">
+              <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground list-none flex items-center gap-2">
+                <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
+                Browse all books to add
+              </summary>
+              <div className="mt-3 max-h-48 overflow-y-auto space-y-2 pl-6">
+                {books
+                  .filter((book) => !selectedBookIds.includes(book.id))
+                  .slice(0, 20)
+                  .map((book) => (
+                    <div
+                      key={book.id}
+                      className="flex items-center gap-3 p-2 hover:bg-muted/50 rounded cursor-pointer"
+                      onClick={() => addBook(book.id)}
+                    >
+                      {book.cover_image_url && (
+                        <img
+                          src={book.cover_image_url}
+                          alt={book.title}
+                          className="w-8 h-12 object-cover rounded"
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{book.title}</p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {book.authors?.name || 'Unknown Author'}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </details>
+          )}
         </div>
       </div>
     );
