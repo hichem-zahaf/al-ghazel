@@ -8,11 +8,13 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Star, ShoppingCart, Percent } from 'lucide-react';
+import { Star, ShoppingCart, Percent, Check } from 'lucide-react';
 import { cn } from '@kit/ui/utils';
 import { Button } from '@kit/ui/button';
 import { Badge } from '@kit/ui/badge';
 import { Card, CardContent } from '@kit/ui/card';
+import { useCartStore } from '~/lib/store/cart-store';
+import { triggerAddToCartAnimation, showAddToCartToast, isBookInCart } from '~/lib/utils/cart-utils';
 import type { Book } from '../../../../types/bookstore';
 
 // Generate deterministic pseudo-random number from string
@@ -42,12 +44,40 @@ export function BookCard({
 }: BookCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isAdded, setIsAdded] = useState(false);
   const hasDiscount = book.originalPrice && book.originalPrice > book.price;
   const isPlanetVariant = ['mercury', 'venus', 'mars', 'jupiter', 'saturn'].includes(variant);
 
+  const addItem = useCartStore((state) => state.addItem);
+  const isInCart = isBookInCart(book.id);
+
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
+    e.stopPropagation();
+
+    if (isInCart) {
+      // Already in cart, navigate to cart page
+      window.location.href = '/cart';
+      return;
+    }
+
+    // Add to cart via store
+    addItem(book);
+
+    // Trigger animation
+    triggerAddToCartAnimation(book);
+
+    // Show toast notification
+    showAddToCartToast(book);
+
+    // Set added state for visual feedback
+    setIsAdded(true);
+
+    // Notify parent component if callback exists
     onAddToCart?.(book);
+
+    // Reset added state after animation
+    setTimeout(() => setIsAdded(false), 2000);
   };
 
   // ========================================================================
@@ -112,10 +142,11 @@ export function BookCard({
             onClick={handleAddToCart}
             className={cn(
               'absolute bottom-3 right-3 transition-all duration-300 bg-orange hover:bg-orange/90',
-              isHovered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
+              isHovered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2',
+              (isAdded || isInCart) && 'bg-green-600 hover:bg-green-700'
             )}
           >
-            <ShoppingCart className="w-3 h-3" />
+            {isAdded || isInCart ? <Check className="w-3 h-3" /> : <ShoppingCart className="w-3 h-3" />}
           </Button>
         </div>
       </Link>
@@ -196,11 +227,21 @@ export function BookCard({
             className={cn(
               'absolute bottom-6 right-6 transition-all duration-500',
               'bg-orange hover:bg-orange/90 shadow-lg',
-              isHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-90'
+              isHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-90',
+              (isAdded || isInCart) && 'bg-green-600 hover:bg-green-700'
             )}
           >
-            <ShoppingCart className="w-5 h-5 mr-2" />
-            Add to Cart
+            {isAdded || isInCart ? (
+              <>
+                <Check className="w-5 h-5 mr-2" />
+                In Cart
+              </>
+            ) : (
+              <>
+                <ShoppingCart className="w-5 h-5 mr-2" />
+                Add to Cart
+              </>
+            )}
           </Button>
         </div>
       </Link>
@@ -271,10 +312,11 @@ export function BookCard({
                 onClick={handleAddToCart}
                 className={cn(
                   'bg-orange hover:bg-orange/90 transition-all duration-300',
-                  isHovered ? 'scale-105' : 'scale-100'
+                  isHovered ? 'scale-105' : 'scale-100',
+                  (isAdded || isInCart) && 'bg-green-600 hover:bg-green-700'
                 )}
               >
-                <ShoppingCart className="w-4 h-4" />
+                {isAdded || isInCart ? <Check className="w-4 h-4" /> : <ShoppingCart className="w-4 h-4" />}
               </Button>
             </div>
           </div>
@@ -361,9 +403,12 @@ export function BookCard({
             <Button
               size="sm"
               onClick={handleAddToCart}
-              className="bg-orange hover:bg-orange/90 shadow-lg"
+              className={cn(
+                'bg-orange hover:bg-orange/90 shadow-lg',
+                (isAdded || isInCart) && 'bg-green-600 hover:bg-green-700'
+              )}
             >
-              <ShoppingCart className="w-4 h-4" />
+              {isAdded || isInCart ? <Check className="w-4 h-4" /> : <ShoppingCart className="w-4 h-4" />}
             </Button>
           </div>
         </div>
@@ -442,9 +487,12 @@ export function BookCard({
                     e.stopPropagation();
                     handleAddToCart(e);
                   }}
-                  className="bg-orange hover:bg-orange/90"
+                  className={cn(
+                    'bg-orange hover:bg-orange/90',
+                    (isAdded || isInCart) && 'bg-green-600 hover:bg-green-700'
+                  )}
                 >
-                  <ShoppingCart className="w-4 h-4" />
+                  {isAdded || isInCart ? <Check className="w-4 h-4" /> : <ShoppingCart className="w-4 h-4" />}
                 </Button>
               </div>
             </div>
@@ -515,10 +563,11 @@ export function BookCard({
             onClick={handleAddToCart}
             className={cn(
               'absolute bottom-2 right-2 transition-opacity duration-200 bg-orange hover:bg-orange/90',
-              isHovered ? 'opacity-100' : 'opacity-0'
+              isHovered ? 'opacity-100' : 'opacity-0',
+              (isAdded || isInCart) && 'bg-green-600 hover:bg-green-700'
             )}
           >
-            <ShoppingCart className="w-4 h-4" />
+            {isAdded || isInCart ? <Check className="w-4 h-4" /> : <ShoppingCart className="w-4 h-4" />}
           </Button>
         </div>
         <div className="mt-3">
@@ -627,12 +676,22 @@ export function BookCard({
           <Button
             className={cn(
               'w-full bg-orange hover:bg-orange/90 transition-all duration-300 mt-auto',
-              isHovered && 'shadow-md'
+              isHovered && 'shadow-md',
+              isAdded && 'bg-green-600 hover:bg-green-700'
             )}
             onClick={handleAddToCart}
           >
-            <ShoppingCart className="w-4 h-4 mr-2" />
-            Add to Cart
+            {isAdded || isInCart ? (
+              <>
+                <Check className="w-4 h-4 mr-2" />
+                In Cart
+              </>
+            ) : (
+              <>
+                <ShoppingCart className="w-4 h-4 mr-2" />
+                Add to Cart
+              </>
+            )}
           </Button>
         </CardContent>
       </Card>

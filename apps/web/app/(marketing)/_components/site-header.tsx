@@ -12,6 +12,8 @@ import { SiteNavigation } from './site-navigation';
 import { SearchButton } from './search-button';
 import { DiscoverButton } from './discover-button';
 import { AiChatButton } from './ai-chat-button';
+import { CartButton } from './bookstore/cart-button';
+import { CartSheet } from './bookstore/cart-sheet';
 import { SearchModal } from './bookstore/search-modal';
 import { BookDiscoveryModal } from './bookstore/book-discovery-modal';
 import { AiChatModal } from './bookstore/ai-chat-modal';
@@ -28,6 +30,7 @@ export function SiteHeader({ user, books, categories, authors }: SiteHeaderProps
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isDiscoveryOpen, setIsDiscoveryOpen] = useState(false);
   const [isAiChatOpen, setIsAiChatOpen] = useState(false);
+  const [isCartOpen, setIsCartOpen] = useState(false);
 
   return (
     <>
@@ -39,6 +42,7 @@ export function SiteHeader({ user, books, categories, authors }: SiteHeaderProps
             <SearchButton onClick={() => setIsSearchOpen(true)} />
             <AiChatButton onClick={() => setIsAiChatOpen(true)} />
             <DiscoverButton onClick={() => setIsDiscoveryOpen(true)} />
+            <CartButton onClick={() => setIsCartOpen(true)} />
             <SiteHeaderAccountSection user={user ?? null} />
           </>
         }
@@ -59,6 +63,10 @@ export function SiteHeader({ user, books, categories, authors }: SiteHeaderProps
         books={books}
         isOpen={isAiChatOpen}
         onClose={() => setIsAiChatOpen(false)}
+      />
+      <CartSheet
+        isOpen={isCartOpen}
+        onClose={() => setIsCartOpen(false)}
       />
     </>
   );

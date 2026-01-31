@@ -80,3 +80,52 @@ export interface NavigationItem {
   icon?: string;
   action?: () => void;
 }
+
+// ============================================================================
+// Cart Types
+// ============================================================================
+
+export type DiscountType = 'percentage' | 'fixed' | 'free_shipping';
+
+export interface Coupon {
+  id: string;
+  code: string;
+  discountType: DiscountType;
+  discountValue: number;
+  minOrderAmount?: number;
+  maxUses?: number;
+  usedCount?: number;
+  expiresAt?: Date;
+  freeShipping?: boolean;
+  description?: string;
+}
+
+export interface CartItem {
+  id: string; // Unique ID for the cart item
+  bookId: string;
+  book: Book;
+  quantity: number;
+  addedAt: Date;
+}
+
+export interface CartState {
+  items: CartItem[];
+  appliedCoupon: Coupon | null;
+  subtotal: number;
+  discount: number;
+  deliveryFee: number;
+  total: number;
+  itemCount: number;
+}
+
+export interface CartStore extends CartState {
+  // Actions
+  addItem: (book: Book) => void;
+  removeItem: (bookId: string) => void;
+  updateQuantity: (bookId: string, quantity: number) => void;
+  clearCart: () => void;
+  applyCoupon: (coupon: Coupon) => { success: boolean; message?: string };
+  removeCoupon: () => void;
+  syncWithServer: () => Promise<void>;
+  initializeCart: () => void;
+}

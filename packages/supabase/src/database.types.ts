@@ -334,6 +334,87 @@ export type Database = {
           },
         ]
       }
+      cart_items: {
+        Row: {
+          added_at: string | null
+          book_id: string
+          cart_id: string
+          id: string
+          quantity: number
+        }
+        Insert: {
+          added_at?: string | null
+          book_id: string
+          cart_id: string
+          id?: string
+          quantity?: number
+        }
+        Update: {
+          added_at?: string | null
+          book_id?: string
+          cart_id?: string
+          id?: string
+          quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cart_items_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "books"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cart_items_cart_id_fkey"
+            columns: ["cart_id"]
+            isOneToOne: false
+            referencedRelation: "carts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      carts: {
+        Row: {
+          account_id: string | null
+          coupon_id: string | null
+          created_at: string | null
+          id: string
+          session_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          coupon_id?: string | null
+          created_at?: string | null
+          id?: string
+          session_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          coupon_id?: string | null
+          created_at?: string | null
+          id?: string
+          session_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "carts_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: true
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "carts_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categories: {
         Row: {
           book_count: number | null
@@ -389,6 +470,7 @@ export type Database = {
           description: string | null
           discount_type: Database["public"]["Enums"]["discount_type"]
           discount_value: number
+          free_shipping: boolean | null
           id: string
           is_active: boolean | null
           max_discount_amount: number | null
@@ -408,6 +490,7 @@ export type Database = {
           description?: string | null
           discount_type: Database["public"]["Enums"]["discount_type"]
           discount_value: number
+          free_shipping?: boolean | null
           id?: string
           is_active?: boolean | null
           max_discount_amount?: number | null
@@ -427,6 +510,7 @@ export type Database = {
           description?: string | null
           discount_type?: Database["public"]["Enums"]["discount_type"]
           discount_value?: number
+          free_shipping?: boolean | null
           id?: string
           is_active?: boolean | null
           max_discount_amount?: number | null
@@ -950,6 +1034,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_to_cart: {
+        Args: {
+          book_id_param: string
+          cart_id: string
+          quantity_param?: number
+        }
+        Returns: string
+      }
+      get_or_create_cart: {
+        Args: { user_id?: string }
+        Returns: string
+      }
       get_preferred_authors: {
         Args: { p_account_id: string; p_min_level?: number }
         Returns: {
@@ -998,6 +1094,10 @@ export type Database = {
       show_trgm: {
         Args: { "": string }
         Returns: string[]
+      }
+      validate_coupon: {
+        Args: { cart_subtotal: number; coupon_code: string }
+        Returns: Json
       }
     }
     Enums: {

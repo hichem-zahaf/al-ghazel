@@ -6,7 +6,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Sparkles, X, Percent } from 'lucide-react';
+import { Sparkles, X, Percent, Check } from 'lucide-react';
 import { cn } from '@kit/ui/utils';
 import { Button } from '@kit/ui/button';
 import { Badge } from '@kit/ui/badge';
@@ -17,6 +17,8 @@ import {
   DialogTitle
 } from '@kit/ui/dialog';
 import Image from 'next/image';
+import { useCartStore } from '~/lib/store/cart-store';
+import { triggerAddToCartAnimation, showAddToCartToast, isBookInCart } from '~/lib/utils/cart-utils';
 import type { Book } from '../../../../types/bookstore';
 
 interface BookRouletteProps {
@@ -40,6 +42,22 @@ export function BookRoulette({ books, className, title, subtitle }: BookRoulette
   const [rotation, setRotation] = useState(0);
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [isAdded, setIsAdded] = useState(false);
+
+  const addItem = useCartStore((state) => state.addItem);
+
+  const handleAddToCart = (book: Book) => {
+    if (isBookInCart(book.id)) {
+      window.location.href = '/cart';
+      return;
+    }
+
+    addItem(book);
+    triggerAddToCartAnimation(book);
+    showAddToCartToast(book);
+    setIsAdded(true);
+    setTimeout(() => setIsAdded(false), 2000);
+  };
 
   // Select a random book
   const spinWheel = () => {
@@ -286,8 +304,21 @@ export function BookRoulette({ books, className, title, subtitle }: BookRoulette
                     {selectedBook.description}
                   </p>
 
-                  <Button className="w-full bg-orange hover:bg-orange/90">
-                    Add to Cart - ${selectedBook.price.toFixed(2)}
+                  <Button
+                    className={cn(
+                      'w-full bg-orange hover:bg-orange/90',
+                      (isAdded || isBookInCart(selectedBook.id)) && 'bg-green-600 hover:bg-green-700'
+                    )}
+                    onClick={() => handleAddToCart(selectedBook)}
+                  >
+                    {isAdded || isBookInCart(selectedBook.id) ? (
+                      <>
+                        <Check className="w-4 h-4 mr-2" />
+                        In Cart - ${selectedBook.price.toFixed(2)}
+                      </>
+                    ) : (
+                      <>Add to Cart - ${selectedBook.price.toFixed(2)}</>
+                    )}
                   </Button>
                 </div>
               </div>
