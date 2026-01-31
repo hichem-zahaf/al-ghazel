@@ -504,27 +504,34 @@ function SectionConfigFields({ section, onChange, books, authors, categories }: 
           </Select>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor={`${section.section_id}-date`}>Featured Date</Label>
-            <Input
-              id={`${section.section_id}-date`}
-              type="date"
-              value={config.featuredDate as string || ''}
-              onChange={(e) => updateConfig('featuredDate', e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor={`${section.section_id}-max`}>Max Books to Show</Label>
-            <Input
-              id={`${section.section_id}-max`}
-              type="number"
-              value={config.maxBooks as number || 3}
-              onChange={(e) => updateConfig('maxBooks', parseInt(e.target.value) || 3)}
-              min={1}
-              max={10}
-            />
-          </div>
+        <div className="space-y-2">
+          <Label htmlFor={`${section.section_id}-layout`}>Layout Style</Label>
+          <Select
+            value={config.layout as string || 'mercury'}
+            onValueChange={(value) => updateConfig('layout', value)}
+          >
+            <SelectTrigger id={`${section.section_id}-layout`}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="mercury">Mercury</SelectItem>
+              <SelectItem value="venus">Venus</SelectItem>
+              <SelectItem value="mars">Mars</SelectItem>
+              <SelectItem value="jupiter">Jupiter</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor={`${section.section_id}-max`}>Max Books to Show</Label>
+          <Input
+            id={`${section.section_id}-max`}
+            type="number"
+            value={config.maxBooks as number || 3}
+            onChange={(e) => updateConfig('maxBooks', parseInt(e.target.value) || 3)}
+            min={1}
+            max={10}
+          />
         </div>
 
         <div className="space-y-2">
@@ -536,33 +543,6 @@ function SectionConfigFields({ section, onChange, books, authors, categories }: 
             placeholder="Why this author is special..."
             rows={3}
           />
-        </div>
-
-        <div className="space-y-2">
-          <Label>Display Options</Label>
-          <div className="flex flex-wrap gap-2">
-            <Badge
-              variant={config.showBio ? 'default' : 'outline'}
-              className="cursor-pointer hover:bg-orange-50"
-              onClick={() => updateConfig('showBio', !(config.showBio as boolean))}
-            >
-              Bio
-            </Badge>
-            <Badge
-              variant={config.showBookCount ? 'default' : 'outline'}
-              className="cursor-pointer hover:bg-orange-50"
-              onClick={() => updateConfig('showBookCount', !(config.showBookCount as boolean))}
-            >
-              Book Count
-            </Badge>
-            <Badge
-              variant={config.showSocialLinks ? 'default' : 'outline'}
-              className="cursor-pointer hover:bg-orange-50"
-              onClick={() => updateConfig('showSocialLinks', !(config.showSocialLinks as boolean))}
-            >
-              Social Links
-            </Badge>
-          </div>
         </div>
       </div>
     );
