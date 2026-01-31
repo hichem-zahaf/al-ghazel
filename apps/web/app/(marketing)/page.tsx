@@ -50,7 +50,7 @@ const defaultConfig: Record<string, Record<string, unknown>> = {
     showRating: true,
     showPrice: true,
     showAddToCart: true,
-    layout: 'featured',
+    layout: 'mercury',
   },
   'author-of-the-day': {
     title: 'Author Spotlight',
@@ -750,6 +750,7 @@ export default async function BookstoreHome() {
 
   // Get config values for titles
   const categoriesTitle = getConfigValue(homepageConfig, 'categories', 'title', 'Browse by Category') as string;
+  const bookOfTheDayLayout = getConfigValue(homepageConfig, 'book-of-the-day', 'layout', 'mercury') as string;
   const recommendedTitle = getConfigValue(homepageConfig, 'recommended-books', 'title', 'Recommended for You') as string;
   const recommendedSubtitle = getConfigValue(homepageConfig, 'recommended-books', 'subtitle', 'Handpicked selections based on popularity') as string;
   const forYouTitle = getConfigValue(homepageConfig, 'for-you', 'title', 'New Releases Just for You') as string;
@@ -773,7 +774,7 @@ export default async function BookstoreHome() {
         {/* Book of the Day */}
         {bookOfTheDay && (
           <section id="book-of-the-day" className="container mx-auto px-4">
-            <BookOfTheDay featured={bookOfTheDay} />
+            <BookOfTheDay featured={bookOfTheDay} layout={bookOfTheDayLayout} />
           </section>
         )}
 

@@ -450,32 +450,22 @@ function SectionConfigFields({ section, onChange, books, authors, categories }: 
           </Select>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor={`${section.section_id}-date`}>Featured Date</Label>
-            <Input
-              id={`${section.section_id}-date`}
-              type="date"
-              value={config.featuredDate as string || ''}
-              onChange={(e) => updateConfig('featuredDate', e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor={`${section.section_id}-layout`}>Layout Style</Label>
-            <Select
-              value={config.layout as string || 'featured'}
-              onValueChange={(value) => updateConfig('layout', value)}
-            >
-              <SelectTrigger id={`${section.section_id}-layout`}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="featured">Featured (Large)</SelectItem>
-                <SelectItem value="compact">Compact</SelectItem>
-                <SelectItem value="minimal">Minimal</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        <div className="space-y-2">
+          <Label htmlFor={`${section.section_id}-layout`}>Layout Style</Label>
+          <Select
+            value={config.layout as string || 'mercury'}
+            onValueChange={(value) => updateConfig('layout', value)}
+          >
+            <SelectTrigger id={`${section.section_id}-layout`}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="mercury">Mercury</SelectItem>
+              <SelectItem value="venus">Venus</SelectItem>
+              <SelectItem value="mars">Mars</SelectItem>
+              <SelectItem value="jupiter">Jupiter</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="space-y-2">
@@ -487,33 +477,6 @@ function SectionConfigFields({ section, onChange, books, authors, categories }: 
             placeholder="Why this book is special..."
             rows={3}
           />
-        </div>
-
-        <div className="space-y-2">
-          <Label>Display Options</Label>
-          <div className="flex flex-wrap gap-2">
-            <Badge
-              variant={config.showRating ? 'default' : 'outline'}
-              className="cursor-pointer hover:bg-orange-50"
-              onClick={() => updateConfig('showRating', !(config.showRating as boolean))}
-            >
-              Rating
-            </Badge>
-            <Badge
-              variant={config.showPrice ? 'default' : 'outline'}
-              className="cursor-pointer hover:bg-orange-50"
-              onClick={() => updateConfig('showPrice', !(config.showPrice as boolean))}
-            >
-              Price
-            </Badge>
-            <Badge
-              variant={config.showAddToCart ? 'default' : 'outline'}
-              className="cursor-pointer hover:bg-orange-50"
-              onClick={() => updateConfig('showAddToCart', !(config.showAddToCart as boolean))}
-            >
-              Add to Cart
-            </Badge>
-          </div>
         </div>
       </div>
     );
