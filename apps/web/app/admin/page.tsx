@@ -108,7 +108,7 @@ const managementCards = [
   {
     title: 'Books',
     description: 'Manage book catalog, inventory, and pricing',
-    href: '/admin/settings?tab=books',
+    href: '/admin/books',
     icon: BookOpen,
     color: 'bg-orange text-white',
     stats: `${mockStats.totalBooks} books`,
@@ -116,7 +116,7 @@ const managementCards = [
   {
     title: 'Authors',
     description: 'Manage author profiles and information',
-    href: '/admin/settings?tab=authors',
+    href: '/admin/authors',
     icon: BookMarked,
     color: 'bg-blue-500 text-white',
     stats: '89 authors',
