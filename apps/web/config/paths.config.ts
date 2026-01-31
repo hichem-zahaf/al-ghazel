@@ -17,6 +17,8 @@ const PathsSchema = z.object({
     dashboard: z.string().min(1),
     orders: z.string().min(1),
     users: z.string().min(1),
+    books: z.string().min(1),
+    authors: z.string().min(1),
     settings: z.string().min(1),
   }),
 });
@@ -38,6 +40,8 @@ const pathsConfig = PathsSchema.parse({
     dashboard: '/admin',
     orders: '/admin/orders',
     users: '/admin/users',
+    books: '/admin/books',
+    authors: '/admin/authors',
     settings: '/admin/settings',
   },
 } satisfies z.infer<typeof PathsSchema>);

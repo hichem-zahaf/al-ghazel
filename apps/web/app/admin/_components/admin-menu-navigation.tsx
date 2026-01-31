@@ -11,6 +11,8 @@ const navItems = [
   { label: 'Dashboard', href: pathsConfig.admin.dashboard },
   { label: 'Orders', href: pathsConfig.admin.orders },
   { label: 'Users', href: pathsConfig.admin.users },
+  { label: 'Books', href: pathsConfig.admin.books },
+  { label: 'Authors', href: pathsConfig.admin.authors },
   { label: 'Settings', href: pathsConfig.admin.settings },
 ];
 

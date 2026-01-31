@@ -51,6 +51,21 @@ const adminRoutes = [
     label: 'Content',
     children: [
       {
+        label: 'Books',
+        path: pathsConfig.admin.books,
+        Icon: <BookOpen className={iconClasses} />,
+      },
+      {
+        label: 'Authors',
+        path: pathsConfig.admin.authors,
+        Icon: <BookMarked className={iconClasses} />,
+      },
+    ],
+  },
+  {
+    label: 'Settings',
+    children: [
+      {
         label: 'Settings',
         path: pathsConfig.admin.settings,
         Icon: <Settings className={iconClasses} />,
