@@ -83,13 +83,19 @@ import { AdminDataTable, FilterConfig } from '../_components/admin-data-table';
 interface Coupon {
   id: string;
   code: string;
-  discountType: 'percentage' | 'fixed';
-  discountValue: number;
-  usageLimit: number;
-  usedCount: number;
-  validFrom: Date;
-  validUntil: Date;
-  isActive: boolean;
+  description: string | null;
+  discount_type: 'percentage' | 'fixed';
+  discount_value: number;
+  min_purchase_amount: number;
+  max_discount_amount: number | null;
+  usage_limit: number | null;
+  used_count: number;
+  valid_from: string;
+  valid_until: string;
+  is_active: boolean;
+  free_shipping: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 interface SectionConfig {
@@ -134,11 +140,20 @@ interface Category {
   display_order: number | null;
 }
 
-// Mock coupons
-const mockCoupons: Coupon[] = [
-  { id: 'c1', code: 'SUMMER20', discountType: 'percentage', discountValue: 20, usageLimit: 100, usedCount: 45, validFrom: new Date('2024-01-01'), validUntil: new Date('2024-12-31'), isActive: true },
-  { id: 'c2', code: 'WELCOME10', discountType: 'fixed', discountValue: 10, usageLimit: 500, usedCount: 123, validFrom: new Date('2024-01-01'), validUntil: new Date('2024-06-30'), isActive: true },
-];
+// Coupon form state
+interface CouponFormData {
+  code: string;
+  description: string;
+  discount_type: 'percentage' | 'fixed';
+  discount_value: string;
+  min_purchase_amount: string;
+  max_discount_amount: string;
+  usage_limit: string;
+  valid_from: string;
+  valid_until: string;
+  is_active: boolean;
+  free_shipping: boolean;
+}
 
 // Drag and Drop Types
 const ItemType = 'SECTION';
@@ -423,126 +438,6 @@ function SectionConfigFields({ section, onChange, books, authors, categories }: 
               </div>
             ))}
           </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (section.section_id === 'book-of-the-day') {
-    return (
-      <div className="space-y-6">
-        <div className="space-y-3">
-          <Label>Select Featured Book</Label>
-          <Select
-            value={config.bookId as string || ''}
-            onValueChange={(value) => updateConfig('bookId', value)}
-          >
-            <SelectTrigger id={`${section.section_id}-book`}>
-              <SelectValue placeholder="Choose a book to feature..." />
-            </SelectTrigger>
-            <SelectContent>
-              {books.map((book) => (
-                <SelectItem key={book.id} value={book.id}>
-                  {book.title} - {book.authors?.name || 'Unknown Author'}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor={`${section.section_id}-layout`}>Layout Style</Label>
-          <Select
-            value={config.layout as string || 'mercury'}
-            onValueChange={(value) => updateConfig('layout', value)}
-          >
-            <SelectTrigger id={`${section.section_id}-layout`}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="mercury">Mercury</SelectItem>
-              <SelectItem value="venus">Venus</SelectItem>
-              <SelectItem value="mars">Mars</SelectItem>
-              <SelectItem value="jupiter">Jupiter</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor={`${section.section_id}-reason`}>Feature Reason</Label>
-          <Textarea
-            id={`${section.section_id}-reason`}
-            value={config.reason as string || ''}
-            onChange={(e) => updateConfig('reason', e.target.value)}
-            placeholder="Why this book is special..."
-            rows={3}
-          />
-        </div>
-      </div>
-    );
-  }
-
-  if (section.section_id === 'author-of-the-day') {
-    return (
-      <div className="space-y-6">
-        <div className="space-y-3">
-          <Label>Select Featured Author</Label>
-          <Select
-            value={config.authorId as string || ''}
-            onValueChange={(value) => updateConfig('authorId', value)}
-          >
-            <SelectTrigger id={`${section.section_id}-author`}>
-              <SelectValue placeholder="Choose an author to feature..." />
-            </SelectTrigger>
-            <SelectContent>
-              {authors.map((author) => (
-                <SelectItem key={author.id} value={author.id}>
-                  {author.name} ({author.book_count || 0} books)
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor={`${section.section_id}-layout`}>Layout Style</Label>
-          <Select
-            value={config.layout as string || 'mercury'}
-            onValueChange={(value) => updateConfig('layout', value)}
-          >
-            <SelectTrigger id={`${section.section_id}-layout`}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="mercury">Mercury</SelectItem>
-              <SelectItem value="venus">Venus</SelectItem>
-              <SelectItem value="mars">Mars</SelectItem>
-              <SelectItem value="jupiter">Jupiter</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor={`${section.section_id}-max`}>Max Books to Show</Label>
-          <Input
-            id={`${section.section_id}-max`}
-            type="number"
-            value={config.maxBooks as number || 3}
-            onChange={(e) => updateConfig('maxBooks', parseInt(e.target.value) || 3)}
-            min={1}
-            max={10}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor={`${section.section_id}-reason`}>Feature Reason</Label>
-          <Textarea
-            id={`${section.section_id}-reason`}
-            value={config.reason as string || ''}
-            onChange={(e) => updateConfig('reason', e.target.value)}
-            placeholder="Why this author is special..."
-            rows={3}
-          />
         </div>
       </div>
     );
@@ -944,54 +839,85 @@ function SectionConfigFields({ section, onChange, books, authors, categories }: 
 }
 
 // Coupon Table Columns
-const couponColumns = [
+const getCouponColumns = (onEdit: (coupon: Coupon) => void, onDelete: (coupon: Coupon) => void) => [
   {
     accessorKey: 'code',
     header: 'Code',
     cell: ({ row }: any) => <span className="font-mono font-medium">{row.getValue('code')}</span>,
   },
   {
-    accessorKey: 'discountType',
+    accessorKey: 'discount_type',
     header: 'Type',
     cell: ({ row }: any) => (
-      <Badge variant="outline" className="capitalize">{row.getValue('discountType')}</Badge>
+      <Badge variant="outline" className="capitalize">{row.getValue('discount_type')}</Badge>
     ),
   },
   {
-    accessorKey: 'discountValue',
+    accessorKey: 'discount_value',
     header: 'Discount',
     cell: ({ row }: any) => {
       const coupon = row.original;
       return (
         <span className="font-medium">
-          {coupon.discountType === 'percentage' ? `${coupon.discountValue}%` : `$${coupon.discountValue}`}
+          {coupon.discount_type === 'percentage' ? `${coupon.discount_value}%` : `$${coupon.discount_value}`}
         </span>
       );
     },
   },
   {
-    accessorKey: 'usedCount',
+    accessorKey: 'used_count',
     header: 'Used',
     cell: ({ row }: any) => {
       const coupon = row.original;
       return (
-        <span>{coupon.usedCount}/{coupon.usageLimit}</span>
+        <span>{coupon.used_count}/{coupon.usage_limit || '∞'}</span>
       );
     },
   },
   {
-    accessorKey: 'validUntil',
+    accessorKey: 'valid_until',
     header: 'Valid Until',
-    cell: ({ row }: any) => <span>{format(row.getValue('validUntil'), 'MMM d, yyyy')}</span>,
+    cell: ({ row }: any) => <span>{format(new Date(row.getValue('valid_until')), 'MMM d, yyyy')}</span>,
   },
   {
-    accessorKey: 'isActive',
+    accessorKey: 'is_active',
     header: 'Status',
     cell: ({ row }: any) => (
-      <Badge className={cn(row.getValue('isActive') ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800')}>
-        {row.getValue('isActive') ? 'Active' : 'Inactive'}
+      <Badge className={cn(row.getValue('is_active') ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800')}>
+        {row.getValue('is_active') ? 'Active' : 'Inactive'}
       </Badge>
     ),
+  },
+  {
+    id: 'actions',
+    header: 'Actions',
+    cell: ({ row }: any) => {
+      const coupon = row.original;
+      return (
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit(coupon);
+            }}
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(coupon);
+            }}
+          >
+            <Trash2 className="h-4 w-4 text-red-500" />
+          </Button>
+        </div>
+      );
+    },
   },
 ];
 
@@ -1016,6 +942,32 @@ function AdminSettingsPage() {
   const [authors, setAuthors] = useState<Author[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
+
+  // Coupons state
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [isLoadingCoupons, setIsLoadingCoupons] = useState(true);
+  const [editingCoupon, setEditingCoupon] = useState<Coupon | null>(null);
+  const [couponFormData, setCouponFormData] = useState<CouponFormData>({
+    code: '',
+    description: '',
+    discount_type: 'percentage',
+    discount_value: '',
+    min_purchase_amount: '',
+    max_discount_amount: '',
+    usage_limit: '',
+    valid_from: '',
+    valid_until: '',
+    is_active: true,
+    free_shipping: false,
+  });
+  const [deleteCouponDialog, setDeleteCouponDialog] = useState<{ open: boolean; coupon: Coupon | null }>({
+    open: false,
+    coupon: null,
+  });
+  const [couponActionStatus, setCouponActionStatus] = useState<{ type: 'idle' | 'success' | 'error'; message: string }>({
+    type: 'idle',
+    message: '',
+  });
 
   // Fetch homepage configuration
   const fetchHomepageConfig = useCallback(async () => {
@@ -1066,6 +1018,157 @@ function AdminSettingsPage() {
       setIsLoadingData(false);
     }
   }, []);
+
+  // Fetch coupons
+  const fetchCoupons = useCallback(async () => {
+    setIsLoadingCoupons(true);
+    try {
+      const response = await fetch('/api/coupons?includeInactive=true');
+      const result = await response.json();
+      if (result.data) {
+        setCoupons(result.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch coupons:', error);
+    } finally {
+      setIsLoadingCoupons(false);
+    }
+  }, []);
+
+  // Open modal for new coupon
+  const openNewCouponModal = useCallback(() => {
+    setEditingCoupon(null);
+    const today = new Date();
+    const futureDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    setCouponFormData({
+      code: '',
+      description: '',
+      discount_type: 'percentage',
+      discount_value: '',
+      min_purchase_amount: '0',
+      max_discount_amount: '',
+      usage_limit: '',
+      valid_from: today.toISOString().split('T')[0] || today.toISOString().slice(0, 10),
+      valid_until: futureDate.toISOString().split('T')[0] || futureDate.toISOString().slice(0, 10),
+      is_active: true,
+      free_shipping: false,
+    });
+    setCouponActionStatus({ type: 'idle', message: '' });
+    setIsCouponModalOpen(true);
+  }, []);
+
+  // Open modal for editing coupon
+  const openEditCouponModal = useCallback((coupon: Coupon) => {
+    setEditingCoupon(coupon);
+    const fromDate = new Date(coupon.valid_from);
+    const untilDate = new Date(coupon.valid_until);
+    setCouponFormData({
+      code: coupon.code,
+      description: coupon.description || '',
+      discount_type: coupon.discount_type,
+      discount_value: String(coupon.discount_value),
+      min_purchase_amount: String(coupon.min_purchase_amount),
+      max_discount_amount: coupon.max_discount_amount ? String(coupon.max_discount_amount) : '',
+      usage_limit: coupon.usage_limit ? String(coupon.usage_limit) : '',
+      valid_from: fromDate.toISOString().split('T')[0] || fromDate.toISOString().slice(0, 10),
+      valid_until: untilDate.toISOString().split('T')[0] || untilDate.toISOString().slice(0, 10),
+      is_active: coupon.is_active,
+      free_shipping: coupon.free_shipping,
+    });
+    setCouponActionStatus({ type: 'idle', message: '' });
+    setIsCouponModalOpen(true);
+  }, []);
+
+  // Save coupon (create or update)
+  const saveCoupon = async () => {
+    setCouponActionStatus({ type: 'idle', message: '' });
+    setIsSaving(true);
+
+    try {
+      const payload: Record<string, unknown> = {
+        ...couponFormData,
+        discount_value: parseFloat(couponFormData.discount_value),
+        min_purchase_amount: parseFloat(couponFormData.min_purchase_amount) || 0,
+        max_discount_amount: couponFormData.max_discount_amount ? parseFloat(couponFormData.max_discount_amount) : null,
+        usage_limit: couponFormData.usage_limit ? parseInt(couponFormData.usage_limit) : null,
+        valid_from: new Date(couponFormData.valid_from).toISOString(),
+        valid_until: new Date(couponFormData.valid_until).toISOString(),
+      };
+
+      if (editingCoupon) {
+        payload.id = editingCoupon.id;
+      }
+
+      const response = await fetch('/api/coupons', {
+        method: editingCoupon ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        setCouponActionStatus({ type: 'success', message: `Coupon ${editingCoupon ? 'updated' : 'created'} successfully!` });
+        await fetchCoupons();
+        setTimeout(() => {
+          setIsCouponModalOpen(false);
+        }, 1000);
+      } else {
+        setCouponActionStatus({ type: 'error', message: result.error || `Failed to ${editingCoupon ? 'update' : 'create'} coupon` });
+      }
+    } catch (error) {
+      setCouponActionStatus({ type: 'error', message: 'Network error while saving coupon' });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Delete coupon
+  const deleteCoupon = async () => {
+    if (!deleteCouponDialog.coupon) return;
+
+    setIsSaving(true);
+    try {
+      const response = await fetch(`/api/coupons?id=${deleteCouponDialog.coupon.id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        await fetchCoupons();
+        setDeleteCouponDialog({ open: false, coupon: null });
+      } else {
+        setCouponActionStatus({ type: 'error', message: 'Failed to delete coupon' });
+      }
+    } catch (error) {
+      setCouponActionStatus({ type: 'error', message: 'Network error while deleting coupon' });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Calculate coupon statistics
+  const couponStats = {
+    total: coupons.length,
+    active: coupons.filter(c => c.is_active).length,
+    expired: coupons.filter(c => new Date(c.valid_until) < new Date()).length,
+    totalUsed: coupons.reduce((sum, c) => sum + c.used_count, 0),
+    totalDiscountValue: coupons.reduce((sum, c) => {
+      if (c.discount_type === 'fixed') {
+        return sum + (c.discount_value * c.used_count);
+      }
+      return sum; // Can't calculate percentage without order data
+    }, 0),
+  };
+
+  // Update useEffect to fetch coupons when tab changes
+  useEffect(() => {
+    if (activeTab === 'homepage') {
+      fetchHomepageConfig();
+      fetchReferenceData();
+    } else if (activeTab === 'coupons') {
+      fetchCoupons();
+    }
+  }, [activeTab, fetchHomepageConfig, fetchReferenceData, fetchCoupons]);
 
   useEffect(() => {
     if (activeTab === 'homepage') {
@@ -1162,7 +1265,7 @@ function AdminSettingsPage() {
 
         {/* Tabs */}
         <Tabs defaultValue="homepage" value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6 h-auto">
+          <TabsList className="grid w-full grid-cols-3 lg:grid-cols-4 h-auto">
             <TabsTrigger value="homepage" className="gap-2">
               <LayoutDashboard className="h-4 w-4" />
               <span className="hidden sm:inline">Home</span>
@@ -1170,14 +1273,6 @@ function AdminSettingsPage() {
             <TabsTrigger value="recommendations" className="gap-2">
               <Sparkles className="h-4 w-4" />
               <span className="hidden sm:inline">AI Recs</span>
-            </TabsTrigger>
-            <TabsTrigger value="book-of-day" className="gap-2">
-              <Star className="h-4 w-4" />
-              <span className="hidden sm:inline">Book</span>
-            </TabsTrigger>
-            <TabsTrigger value="author-of-day" className="gap-2">
-              <UserCog className="h-4 w-4" />
-              <span className="hidden sm:inline">Author</span>
             </TabsTrigger>
             <TabsTrigger value="coupons" className="gap-2">
               <Tags className="h-4 w-4" />
@@ -1316,116 +1411,37 @@ function AdminSettingsPage() {
             </Card>
           </TabsContent>
 
-          {/* Book of the Day Tab */}
-          <TabsContent value="book-of-day" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Book of the Day</CardTitle>
-                <CardDescription>Schedule featured books to highlight on the homepage</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="botd-book">Select Book</Label>
-                  <Select>
-                    <SelectTrigger id="botd-book">
-                      <SelectValue placeholder="Choose a book..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {books.slice(0, 5).map((book) => (
-                        <SelectItem key={book.id} value={book.id}>
-                          {book.title}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="botd-date">Featured Date</Label>
-                  <Input id="botd-date" type="date" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="botd-description">Description</Label>
-                  <Textarea id="botd-description" placeholder="Why this book is special..." />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="botd-display-order">Display Order</Label>
-                  <Input id="botd-display-order" type="number" defaultValue="1" />
-                </div>
-                <Button>Schedule Book</Button>
-
-                <div className="border-t pt-6">
-                  <h3 className="font-semibold mb-4">Scheduled Books</h3>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                      <div>
-                        <p className="font-medium">The Midnight Library</p>
-                        <p className="text-sm text-muted-foreground">Feb 1, 2024</p>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm"><Pencil className="h-4 w-4" /></Button>
-                        <Button variant="outline" size="sm"><Trash2 className="h-4 w-4" /></Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Author of the Day Tab */}
-          <TabsContent value="author-of-day" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Author of the Day</CardTitle>
-                <CardDescription>Schedule featured authors to highlight on the homepage</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="aotd-author">Select Author</Label>
-                  <Select>
-                    <SelectTrigger id="aotd-author">
-                      <SelectValue placeholder="Choose an author..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {authors.slice(0, 5).map((author) => (
-                        <SelectItem key={author.id} value={author.id}>
-                          {author.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="aotd-date">Featured Date</Label>
-                  <Input id="aotd-date" type="date" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="aotd-description">Description</Label>
-                  <Textarea id="aotd-description" placeholder="Why this author is special..." />
-                </div>
-                <Button>Schedule Author</Button>
-
-                <div className="border-t pt-6">
-                  <h3 className="font-semibold mb-4">Scheduled Authors</h3>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                      <div>
-                        <p className="font-medium">Matt Haig</p>
-                        <p className="text-sm text-muted-foreground">Feb 1, 2024</p>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm"><Pencil className="h-4 w-4" /></Button>
-                        <Button variant="outline" size="sm"><Trash2 className="h-4 w-4" /></Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
           {/* Coupons Tab */}
           <TabsContent value="coupons" className="space-y-6">
+            {/* Statistics Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Card className="bg-gradient-to-br from-orange-50 to-beige-50 dark:from-orange-950/20 dark:to-beige-950/20 border-orange-200 dark:border-orange-800">
+                <CardHeader className="pb-2">
+                  <CardDescription>Total Coupons</CardDescription>
+                  <CardTitle className="text-3xl">{couponStats.total}</CardTitle>
+                </CardHeader>
+              </Card>
+              <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20 border-green-200 dark:border-green-800">
+                <CardHeader className="pb-2">
+                  <CardDescription>Active Coupons</CardDescription>
+                  <CardTitle className="text-3xl text-green-700 dark:text-green-400">{couponStats.active}</CardTitle>
+                </CardHeader>
+              </Card>
+              <Card className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/20 dark:to-red-900/20 border-red-200 dark:border-red-800">
+                <CardHeader className="pb-2">
+                  <CardDescription>Expired Coupons</CardDescription>
+                  <CardTitle className="text-3xl text-red-700 dark:text-red-400">{couponStats.expired}</CardTitle>
+                </CardHeader>
+              </Card>
+              <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 border-blue-200 dark:border-blue-800">
+                <CardHeader className="pb-2">
+                  <CardDescription>Total Uses</CardDescription>
+                  <CardTitle className="text-3xl text-blue-700 dark:text-blue-400">{couponStats.totalUsed}</CardTitle>
+                </CardHeader>
+              </Card>
+            </div>
+
+            {/* Coupons Table */}
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -1433,22 +1449,35 @@ function AdminSettingsPage() {
                     <CardTitle>Discount Coupons</CardTitle>
                     <CardDescription>Create and manage discount coupons</CardDescription>
                   </div>
-                  <Button onClick={() => setIsCouponModalOpen(true)}>
+                  <Button onClick={openNewCouponModal}>
                     <Plus className="h-4 w-4 mr-2" />
                     Add Coupon
                   </Button>
                 </div>
               </CardHeader>
               <CardContent>
+                {couponActionStatus.type !== 'idle' && (
+                  <div className={cn(
+                    'mb-4 p-3 rounded-lg flex items-center gap-2',
+                    couponActionStatus.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                  )}>
+                    {couponActionStatus.type === 'success' ? (
+                      <Check className="h-4 w-4" />
+                    ) : (
+                      <AlertCircle className="h-4 w-4" />
+                    )}
+                    <span className="text-sm font-medium">{couponActionStatus.message}</span>
+                  </div>
+                )}
                 <AdminDataTable
-                  columns={couponColumns}
-                  data={mockCoupons}
+                  columns={getCouponColumns(openEditCouponModal, (coupon) => setDeleteCouponDialog({ open: true, coupon }))}
+                  data={coupons}
+                  isLoading={isLoadingCoupons}
                   searchable={true}
                   searchPlaceholder="Search by code..."
-                  selectable={true}
+                  selectable={false}
                   pagination={true}
                   pageSize={10}
-                  onRowClick={(coupon) => {}}
                 />
               </CardContent>
             </Card>
@@ -1533,66 +1562,267 @@ function AdminSettingsPage() {
           </AlertDialogContent>
         </AlertDialog>
 
-        {/* Coupon Edit Modal */}
-        <Dialog open={isCouponModalOpen} onOpenChange={setIsCouponModalOpen}>
-          <DialogContent>
+        {/* Coupon Edit/Create Modal */}
+        <Dialog open={isCouponModalOpen} onOpenChange={(open) => !isSaving && setIsCouponModalOpen(open)}>
+          <DialogContent className="max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Add New Coupon</DialogTitle>
-              <DialogDescription>Create a new discount coupon</DialogDescription>
+              <DialogTitle>{editingCoupon ? 'Edit Coupon' : 'Add New Coupon'}</DialogTitle>
+              <DialogDescription>
+                {editingCoupon ? 'Update coupon details' : 'Create a new discount coupon'}
+              </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="coupon-code">Code</Label>
-                <Input id="coupon-code" placeholder="SUMMER20" />
+
+            {couponActionStatus.type !== 'idle' && (
+              <div className={cn(
+                'p-3 rounded-lg flex items-center gap-2',
+                couponActionStatus.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+              )}>
+                {couponActionStatus.type === 'success' ? (
+                  <Check className="h-4 w-4" />
+                ) : (
+                  <AlertCircle className="h-4 w-4" />
+                )}
+                <span className="text-sm font-medium">{couponActionStatus.message}</span>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+            )}
+
+            <div className="grid gap-4 py-4">
+              {/* Code */}
+              <div className="grid gap-2">
+                <Label htmlFor="coupon-code">Coupon Code *</Label>
+                <Input
+                  id="coupon-code"
+                  placeholder="SUMMER20"
+                  value={couponFormData.code}
+                  onChange={(e) => setCouponFormData({ ...couponFormData, code: e.target.value.toUpperCase() })}
+                  disabled={isSaving}
+                />
+                <p className="text-xs text-muted-foreground">Unique code for the coupon (will be auto-capitalized)</p>
+              </div>
+
+              {/* Description */}
+              <div className="grid gap-2">
+                <Label htmlFor="coupon-description">Description</Label>
+                <Textarea
+                  id="coupon-description"
+                  placeholder="Summer sale discount"
+                  value={couponFormData.description}
+                  onChange={(e) => setCouponFormData({ ...couponFormData, description: e.target.value })}
+                  disabled={isSaving}
+                  rows={2}
+                />
+              </div>
+
+              {/* Discount Type and Value */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="coupon-type">Discount Type</Label>
-                  <Select>
+                  <Label htmlFor="coupon-type">Discount Type *</Label>
+                  <Select
+                    value={couponFormData.discount_type}
+                    onValueChange={(value: 'percentage' | 'fixed') => setCouponFormData({ ...couponFormData, discount_type: value })}
+                    disabled={isSaving}
+                  >
                     <SelectTrigger id="coupon-type">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="percentage">Percentage</SelectItem>
-                      <SelectItem value="fixed">Fixed Amount</SelectItem>
+                      <SelectItem value="percentage">Percentage (%)</SelectItem>
+                      <SelectItem value="fixed">Fixed Amount ($)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="coupon-value">Discount Value</Label>
-                  <Input id="coupon-value" type="number" placeholder="20" />
+                  <Label htmlFor="coupon-value">
+                    Discount Value * {couponFormData.discount_type === 'percentage' ? '(%)' : '($)'}
+                  </Label>
+                  <Input
+                    id="coupon-value"
+                    type="number"
+                    placeholder={couponFormData.discount_type === 'percentage' ? '20' : '10'}
+                    value={couponFormData.discount_value}
+                    onChange={(e) => setCouponFormData({ ...couponFormData, discount_value: e.target.value })}
+                    disabled={isSaving}
+                    min={0}
+                    step={couponFormData.discount_type === 'percentage' ? 1 : 0.01}
+                  />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+
+              {/* Min Purchase and Max Discount */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="coupon-min">Min Purchase</Label>
-                  <Input id="coupon-min" type="number" placeholder="0" />
+                  <Label htmlFor="coupon-min">Minimum Purchase Amount ($)</Label>
+                  <Input
+                    id="coupon-min"
+                    type="number"
+                    placeholder="0"
+                    value={couponFormData.min_purchase_amount}
+                    onChange={(e) => setCouponFormData({ ...couponFormData, min_purchase_amount: e.target.value })}
+                    disabled={isSaving}
+                    min={0}
+                    step={0.01}
+                  />
+                  <p className="text-xs text-muted-foreground">Minimum order value required</p>
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="coupon-limit">Usage Limit</Label>
-                  <Input id="coupon-limit" type="number" placeholder="100" />
+                  <Label htmlFor="coupon-max">Maximum Discount Amount ($)</Label>
+                  <Input
+                    id="coupon-max"
+                    type="number"
+                    placeholder="Optional"
+                    value={couponFormData.max_discount_amount}
+                    onChange={(e) => setCouponFormData({ ...couponFormData, max_discount_amount: e.target.value })}
+                    disabled={isSaving}
+                    min={0}
+                    step={0.01}
+                  />
+                  <p className="text-xs text-muted-foreground">Leave empty for no limit</p>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+
+              {/* Usage Limit */}
+              <div className="grid gap-2">
+                <Label htmlFor="coupon-limit">Usage Limit</Label>
+                <Input
+                  id="coupon-limit"
+                  type="number"
+                  placeholder="Leave empty for unlimited"
+                  value={couponFormData.usage_limit}
+                  onChange={(e) => setCouponFormData({ ...couponFormData, usage_limit: e.target.value })}
+                  disabled={isSaving}
+                  min={1}
+                />
+                <p className="text-xs text-muted-foreground">Maximum number of times this coupon can be used</p>
+              </div>
+
+              {/* Valid From and Valid Until */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="coupon-start">Valid From</Label>
-                  <Input id="coupon-start" type="date" />
+                  <Label htmlFor="coupon-start">Valid From *</Label>
+                  <Input
+                    id="coupon-start"
+                    type="date"
+                    value={couponFormData.valid_from}
+                    onChange={(e) => setCouponFormData({ ...couponFormData, valid_from: e.target.value })}
+                    disabled={isSaving}
+                  />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="coupon-end">Valid Until</Label>
-                  <Input id="coupon-end" type="date" />
+                  <Label htmlFor="coupon-end">Valid Until *</Label>
+                  <Input
+                    id="coupon-end"
+                    type="date"
+                    value={couponFormData.valid_until}
+                    onChange={(e) => setCouponFormData({ ...couponFormData, valid_until: e.target.value })}
+                    disabled={isSaving}
+                    min={couponFormData.valid_from}
+                  />
                 </div>
               </div>
+
+              {/* Options */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 border rounded-lg">
+                  <div>
+                    <Label htmlFor="coupon-active">Active Status</Label>
+                    <p className="text-xs text-muted-foreground">Enable or disable this coupon</p>
+                  </div>
+                  <Switch
+                    id="coupon-active"
+                    checked={couponFormData.is_active}
+                    onCheckedChange={(checked) => setCouponFormData({ ...couponFormData, is_active: checked })}
+                    disabled={isSaving}
+                  />
+                </div>
+                <div className="flex items-center justify-between p-3 border rounded-lg">
+                  <div>
+                    <Label htmlFor="coupon-shipping">Free Shipping</Label>
+                    <p className="text-xs text-muted-foreground">Coupon also provides free shipping</p>
+                  </div>
+                  <Switch
+                    id="coupon-shipping"
+                    checked={couponFormData.free_shipping}
+                    onCheckedChange={(checked) => setCouponFormData({ ...couponFormData, free_shipping: checked })}
+                    disabled={isSaving}
+                  />
+                </div>
+              </div>
+
+              {/* Coupon Usage Info (for editing) */}
+              {editingCoupon && (
+                <div className="bg-muted/50 p-3 rounded-lg space-y-2">
+                  <p className="text-sm font-medium">Coupon Statistics</p>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Times Used:</span>{' '}
+                      <span className="font-medium">{editingCoupon.used_count}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Created:</span>{' '}
+                      <span className="font-medium">{format(new Date(editingCoupon.created_at), 'MMM d, yyyy')}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
+
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsCouponModalOpen(false)}>Cancel</Button>
-              <Button>
-                <Save className="h-4 w-4 mr-2" />
-                Create Coupon
+              <Button variant="outline" onClick={() => setIsCouponModalOpen(false)} disabled={isSaving}>
+                Cancel
+              </Button>
+              <Button onClick={saveCoupon} disabled={isSaving || !couponFormData.code || !couponFormData.discount_value || !couponFormData.valid_from || !couponFormData.valid_until}>
+                {isSaving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    {editingCoupon ? 'Update Coupon' : 'Create Coupon'}
+                  </>
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Delete Coupon Confirmation Dialog */}
+        <AlertDialog open={deleteCouponDialog.open} onOpenChange={(open) => !isSaving && setDeleteCouponDialog({ open, coupon: deleteCouponDialog.coupon })}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Coupon?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete the coupon "{deleteCouponDialog.coupon?.code}"? This action cannot be undone.
+                {(deleteCouponDialog.coupon?.used_count ?? 0) > 0 && (
+                  <span className="block mt-2 text-amber-600 font-medium">
+                    Warning: This coupon has been used {deleteCouponDialog.coupon?.used_count ?? 0} time(s).
+                  </span>
+                )}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isSaving}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={(e) => {
+                  e.preventDefault();
+                  deleteCoupon();
+                }}
+                disabled={isSaving}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete Coupon'
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </PageBody>
   );
