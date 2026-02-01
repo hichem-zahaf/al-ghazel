@@ -38,9 +38,6 @@ export function CategoryCarousel({
           >
             <Card className="group overflow-hidden transition-all hover:shadow-lg hover:-translate-y-1 h-full">
               <CardContent className="p-6 text-center">
-                <div className="mb-3 flex justify-center text-orange">
-                  <CategoryIcon iconName={category.icon} size={36} />
-                </div>
                 <h3 className="font-semibold text-black dark:text-beige mb-2">
                   {category.name}
                 </h3>

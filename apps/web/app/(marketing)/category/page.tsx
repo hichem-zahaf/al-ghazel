@@ -156,9 +156,6 @@ export default async function CategoryPage() {
               {/* Category Header */}
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-4">
-                  <div className="text-orange">
-                    <CategoryIcon iconName={category.icon} size={48} />
-                  </div>
                   <div>
                     <h2 className="text-3xl font-bold text-black dark:text-beige">
                       {category.name}
