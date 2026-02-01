@@ -7,6 +7,7 @@ import { useParams } from 'next/navigation';
 import { ArrowLeft, BookOpen, Search, SlidersHorizontal, X } from 'lucide-react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { BookCard } from '~/(marketing)/_components/bookstore/book-card';
+import { CategoryIcon } from '~/(marketing)/_components/bookstore/category-icon';
 import { Button } from '@kit/ui/button';
 import { Badge } from '@kit/ui/badge';
 import { Input } from '@kit/ui/input';
@@ -198,7 +199,9 @@ export default function CategoryDetailPage() {
         <div className="mb-8">
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-6">
             <div className="flex items-start gap-4">
-              <div className="text-6xl">{category.icon || '📚'}</div>
+              <div className="text-orange">
+                <CategoryIcon iconName={category.icon} size={56} />
+              </div>
               <div>
                 <h1 className="text-4xl lg:text-5xl font-bold text-black dark:text-beige mb-2">
                   {category.name}

@@ -4,6 +4,7 @@ import { ArrowRight, BookOpen } from 'lucide-react';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { Button } from '@kit/ui/button';
 import { BookCard } from '~/(marketing)/_components/bookstore/book-card';
+import { CategoryIcon } from '~/(marketing)/_components/bookstore/category-icon';
 import type { Book } from '~/types/bookstore';
 
 interface Category {
@@ -115,7 +116,7 @@ function transformBook(book: BookWithDetails): Book {
         id: bc.categories.id,
         name: bc.categories.name,
         slug: bc.categories.slug,
-        icon: '📚',
+        icon: bc.categories.icon || 'BookOpen',
         bookCount: 0,
       })) ?? [],
     rating: book.rating || 0,
@@ -155,7 +156,9 @@ export default async function CategoryPage() {
               {/* Category Header */}
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-4">
-                  <div className="text-5xl">{category.icon || '📚'}</div>
+                  <div className="text-orange">
+                    <CategoryIcon iconName={category.icon} size={48} />
+                  </div>
                   <div>
                     <h2 className="text-3xl font-bold text-black dark:text-beige">
                       {category.name}

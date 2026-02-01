@@ -94,7 +94,7 @@ function transformCategory(dbCategory: DbCategory): Category {
     id: dbCategory.id,
     name: dbCategory.name,
     slug: dbCategory.slug,
-    icon: dbCategory.icon ?? '📚',
+    icon: dbCategory.icon ?? 'BookOpen',
     bookCount: dbCategory.book_count ?? 0,
     description: dbCategory.description ?? undefined,
   };
@@ -105,7 +105,7 @@ function transformBook(dbBook: DbBook): Book {
     id: bc.categories.id,
     name: bc.categories.name,
     slug: bc.categories.slug,
-    icon: bc.categories.icon ?? '📚',
+    icon: bc.categories.icon ?? 'BookOpen',
     bookCount: bc.categories.book_count ?? 0,
   })) ?? [];
 

@@ -10,6 +10,7 @@ import { cn } from '@kit/ui/utils';
 import { Badge } from '@kit/ui/badge';
 import { Card, CardContent } from '@kit/ui/card';
 import { HorizontalScroller } from '../shared/horizontal-scroller';
+import { CategoryIcon } from './category-icon';
 import type { Category } from '../../../../types/bookstore';
 
 interface CategoryCarouselProps {
@@ -37,7 +38,9 @@ export function CategoryCarousel({
           >
             <Card className="group overflow-hidden transition-all hover:shadow-lg hover:-translate-y-1 h-full">
               <CardContent className="p-6 text-center">
-                <div className="text-4xl mb-3">{category.icon}</div>
+                <div className="mb-3 flex justify-center text-orange">
+                  <CategoryIcon iconName={category.icon} size={36} />
+                </div>
                 <h3 className="font-semibold text-black dark:text-beige mb-2">
                   {category.name}
                 </h3>
