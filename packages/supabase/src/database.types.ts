@@ -73,6 +73,59 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_config: {
+        Row: {
+          api_key: string | null
+          cloud_provider: string | null
+          config: Json | null
+          created_at: string | null
+          deployment_type: string
+          id: string
+          local_provider: string | null
+          model: string | null
+          ollama_model: string | null
+          ollama_url: string | null
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          api_key?: string | null
+          cloud_provider?: string | null
+          config?: Json | null
+          created_at?: string | null
+          deployment_type?: string
+          id?: string
+          local_provider?: string | null
+          model?: string | null
+          ollama_model?: string | null
+          ollama_url?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          api_key?: string | null
+          cloud_provider?: string | null
+          config?: Json | null
+          created_at?: string | null
+          deployment_type?: string
+          id?: string
+          local_provider?: string | null
+          model?: string | null
+          ollama_model?: string | null
+          ollama_url?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_config_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       author_of_the_day: {
         Row: {
           author_id: string
