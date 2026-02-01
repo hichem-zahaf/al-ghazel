@@ -4,7 +4,6 @@ import { ArrowRight, BookOpen } from 'lucide-react';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { Button } from '@kit/ui/button';
 import { BookCard } from '~/(marketing)/_components/bookstore/book-card';
-import { CategoryIcon } from '~/(marketing)/_components/bookstore/category-icon';
 import type { Book } from '~/types/bookstore';
 
 interface Category {

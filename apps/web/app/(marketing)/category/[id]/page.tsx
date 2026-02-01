@@ -7,7 +7,6 @@ import { useParams } from 'next/navigation';
 import { ArrowLeft, BookOpen, Search, SlidersHorizontal, X } from 'lucide-react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { BookCard } from '~/(marketing)/_components/bookstore/book-card';
-import { CategoryIcon } from '~/(marketing)/_components/bookstore/category-icon';
 import { Button } from '@kit/ui/button';
 import { Badge } from '@kit/ui/badge';
 import { Input } from '@kit/ui/input';

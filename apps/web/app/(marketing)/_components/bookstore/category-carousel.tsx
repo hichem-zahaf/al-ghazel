@@ -10,7 +10,6 @@ import { cn } from '@kit/ui/utils';
 import { Badge } from '@kit/ui/badge';
 import { Card, CardContent } from '@kit/ui/card';
 import { HorizontalScroller } from '../shared/horizontal-scroller';
-import { CategoryIcon } from './category-icon';
 import type { Category } from '../../../../types/bookstore';
 
 interface CategoryCarouselProps {
