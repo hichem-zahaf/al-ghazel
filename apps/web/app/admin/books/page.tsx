@@ -16,6 +16,8 @@ import {
   Loader2,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   Check,
   Square,
   SquareCheck,
@@ -105,11 +107,20 @@ type Book = {
   is_bestseller: boolean | null;
   is_new_release: boolean | null;
   created_at: string | null;
+  categories?: string[];
 };
 
 type Author = {
   id: string;
   name: string;
+};
+
+type Category = {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  book_count: number;
 };
 
 // Form schema
@@ -118,6 +129,7 @@ const bookFormSchema = z.object({
   subtitle: z.string().optional(),
   description: z.string().optional(),
   author_id: z.string().min(1, 'Author is required'),
+  categories: z.array(z.string()).optional(),
   isbn: z.string().optional(),
   cover_image_url: z.string().url().or(z.literal('')).optional(),
   publisher: z.string().optional(),
@@ -140,10 +152,10 @@ type BookFormValues = z.infer<typeof bookFormSchema>;
 // Memoized components for performance
 const StatusBadge = memo(({ status }: { status: string | null }) => {
   const variants: Record<string, string> = {
-    active: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-    inactive: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200',
-    draft: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-    out_of_stock: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+    active: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+    inactive: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
+    draft: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
+    out_of_stock: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
   };
 
   return (
@@ -192,7 +204,7 @@ const BookRow = memo(({
   onEdit: (book: Book) => void;
   onDelete: (id: string) => void;
 }) => (
-  <TableRow className="hover:bg-[rgb(250, 243, 225)]/30">
+  <TableRow className="hover:bg-muted/50">
     <TableCell className="w-[50px]">
       <Checkbox
         checked={selected}
@@ -210,7 +222,7 @@ const BookRow = memo(({
           />
         )}
         <div className="min-w-0">
-          <p className="font-medium text-[#222222] truncate">{book.title}</p>
+          <p className="font-medium truncate">{book.title}</p>
           {book.subtitle && (
             <p className="text-sm text-muted-foreground truncate">{book.subtitle}</p>
           )}
@@ -225,7 +237,7 @@ const BookRow = memo(({
     </TableCell>
     <TableCell>
       <div className="flex flex-col">
-        <span className="font-medium text-[#222222]">${book.price.toFixed(2)}</span>
+        <span className="font-medium">${book.price.toFixed(2)}</span>
         {book.original_price && book.original_price > book.price && (
           <span className="text-sm text-muted-foreground line-through">
             ${book.original_price.toFixed(2)}
@@ -237,8 +249,8 @@ const BookRow = memo(({
       <Badge
         variant={book.stock_quantity && book.stock_quantity > 10 ? 'default' : 'destructive'}
         className={book.stock_quantity && book.stock_quantity > 10
-          ? 'bg-green-100 text-green-800'
-          : 'bg-red-100 text-red-800'
+          ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+          : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
         }
       >
         {book.stock_quantity ?? 0}
@@ -269,7 +281,6 @@ const BookRow = memo(({
           variant="ghost"
           size="icon"
           onClick={() => onEdit(book)}
-          className="hover:bg-[#F5E7C6] hover:text-[#222222]"
         >
           <Edit className="h-4 w-4" />
         </Button>
@@ -277,7 +288,7 @@ const BookRow = memo(({
           variant="ghost"
           size="icon"
           onClick={() => onDelete(book.id)}
-          className="hover:bg-red-100 hover:text-red-600"
+          className="hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30"
         >
           <Trash2 className="h-4 w-4" />
         </Button>
@@ -291,6 +302,7 @@ export default function AdminBooksPage() {
   // Data state
   const [allBooks, setAllBooks] = useState<Book[]>([]);
   const [authors, setAuthors] = useState<Author[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Filter state
@@ -317,6 +329,7 @@ export default function AdminBooksPage() {
   const [submitting, setSubmitting] = useState(false);
   const [newAuthorName, setNewAuthorName] = useState('');
   const [isAddingAuthor, setIsAddingAuthor] = useState(false);
+  const [categoriesExpanded, setCategoriesExpanded] = useState(false);
 
   // Form setup with memoized default values
   const defaultFormValues = useMemo<BookFormValues>(() => ({
@@ -324,6 +337,7 @@ export default function AdminBooksPage() {
     subtitle: '',
     description: '',
     author_id: '',
+    categories: [],
     isbn: '',
     cover_image_url: '',
     publisher: '',
@@ -379,11 +393,25 @@ export default function AdminBooksPage() {
     }
   }, []);
 
+  // Fetch categories once
+  const fetchCategories = useCallback(async () => {
+    try {
+      const response = await fetch('/api/categories');
+      const result = await response.json();
+      if (result.data) {
+        setCategories(result.data);
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    }
+  }, []);
+
   // Initial data fetch
   useEffect(() => {
     fetchBooks();
     fetchAuthors();
-  }, [fetchBooks, fetchAuthors]);
+    fetchCategories();
+  }, [fetchBooks, fetchAuthors, fetchCategories]);
 
   // Client-side filtering with memoization
   const filteredBooks = useMemo(() => {
@@ -445,6 +473,7 @@ export default function AdminBooksPage() {
       subtitle: book.subtitle || '',
       description: book.description || '',
       author_id: book.author_id,
+      categories: book.categories || [],
       isbn: book.isbn || '',
       cover_image_url: book.cover_image_url || '',
       publisher: book.publisher || '',
@@ -473,6 +502,7 @@ export default function AdminBooksPage() {
         subtitle: values.subtitle || null,
         description: values.description || null,
         author_id: values.author_id,
+        categories: values.categories || [],
         isbn: values.isbn || null,
         cover_image_url: values.cover_image_url || null,
         publisher: values.publisher || null,
@@ -641,7 +671,7 @@ export default function AdminBooksPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-[#222222]">Books Management</h1>
+            <h1 className="text-3xl font-bold">Books Management</h1>
             <p className="text-muted-foreground mt-1">
               {filteredBooks.length} books total
             </p>
@@ -668,7 +698,7 @@ export default function AdminBooksPage() {
         </div>
 
         {/* Filters */}
-        <Card className="border-gray-200">
+        <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg flex items-center gap-2">
@@ -761,7 +791,7 @@ export default function AdminBooksPage() {
         </Card>
 
         {/* Books Table */}
-        <Card className="border-gray-200">
+        <Card>
           <CardHeader>
             <CardTitle>
               Showing {paginatedBooks.length} of {filteredBooks.length} books
@@ -779,7 +809,7 @@ export default function AdminBooksPage() {
             ) : filteredBooks.length === 0 ? (
               <div className="text-center py-12">
                 <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-medium text-[#222222]">No books found</h3>
+                <h3 className="text-lg font-medium">No books found</h3>
                 <p className="text-muted-foreground mt-1">
                   Try adjusting your filters or add a new book
                 </p>
@@ -789,7 +819,7 @@ export default function AdminBooksPage() {
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
-                      <TableRow className="hover:bg-[rgb(250, 243, 225)]/50">
+                      <TableRow className="hover:bg-muted/50">
                         <TableHead className="w-[50px]">
                           <Checkbox
                             checked={isAllSelected}
@@ -856,7 +886,7 @@ export default function AdminBooksPage() {
                             variant={currentPage === pageNum ? 'default' : 'outline'}
                             size="icon"
                             onClick={() => setCurrentPage(pageNum)}
-                            className={currentPage === pageNum ? 'bg-[#FA8112] text-white hover:bg-[#e6730f]' : ''}
+                            className={currentPage === pageNum ? 'bg-[#FA8112] text-white hover:bg-[#e6730f]' : 'data-[state=active]:bg-[#FA8112]'}
                           >
                             {pageNum}
                           </Button>
@@ -978,6 +1008,93 @@ export default function AdminBooksPage() {
                       <FormMessage />
                     </FormItem>
                   )}
+                />
+
+                {/* Categories */}
+                <FormField
+                  control={form.control}
+                  name="categories"
+                  render={({ field }) => {
+                    const selectedCategories = categories.filter(c => field.value?.includes(c.id));
+                    return (
+                      <FormItem className="md:col-span-2">
+                        <div className="flex items-center justify-between">
+                          <FormLabel>Categories</FormLabel>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setCategoriesExpanded(!categoriesExpanded)}
+                            className="h-7 text-xs"
+                          >
+                            {categoriesExpanded ? (
+                              <>Collapse <ChevronUp className="h-3 w-3 ml-1" /></>
+                            ) : (
+                              <>Expand <ChevronDown className="h-3 w-3 ml-1" /></>
+                            )}
+                          </Button>
+                        </div>
+
+                        {/* Selected categories as pills (always visible) */}
+                        {selectedCategories.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {selectedCategories.map((category) => (
+                              <Badge
+                                key={category.id}
+                                className="bg-[#FA8112] text-white hover:bg-[#e6730f] cursor-pointer"
+                                onClick={() => {
+                                  field.onChange(field.value?.filter((id: string) => id !== category.id) || []);
+                                }}
+                              >
+                                {category.name}
+                                <X className="h-3 w-3 ml-1" />
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Full category grid (when expanded) */}
+                        {categoriesExpanded && (
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-3 p-3 rounded-lg border bg-gray-50 dark:bg-gray-900 dark:border-gray-700">
+                            {categories.map((category) => {
+                              const isSelected = field.value?.includes(category.id);
+                              return (
+                                <label
+                                  key={category.id}
+                                  className={cn(
+                                    'flex items-center gap-2 p-2 rounded-md border cursor-pointer transition-colors',
+                                    isSelected
+                                      ? 'bg-[#FAF3E1] dark:bg-[#FA8112]/20 border-[#FA8112] dark:border-[#FA8112]/50'
+                                      : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                                  )}
+                                >
+                                  <Checkbox
+                                    checked={isSelected}
+                                    onCheckedChange={(checked) => {
+                                      const currentValues = field.value || [];
+                                      if (checked) {
+                                        field.onChange([...currentValues, category.id]);
+                                      } else {
+                                        field.onChange(currentValues.filter((id: string) => id !== category.id));
+                                      }
+                                    }}
+                                  />
+                                  <span className="text-sm">{category.name}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        <FormDescription className="text-xs mt-1">
+                          {selectedCategories.length === 0
+                            ? 'Select one or more categories for this book'
+                            : `${selectedCategories.length} categor${selectedCategories.length === 1 ? 'y' : 'ies'} selected`}
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
                 />
 
                 {/* ISBN */}
@@ -1227,7 +1344,7 @@ export default function AdminBooksPage() {
                       control={form.control}
                       name="is_featured"
                       render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border border-gray-200 p-3">
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
                           <div className="space-y-0.5">
                             <FormLabel className="text-base">Featured</FormLabel>
                             <FormDescription>Show on homepage</FormDescription>
@@ -1247,7 +1364,7 @@ export default function AdminBooksPage() {
                       control={form.control}
                       name="is_bestseller"
                       render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border border-gray-200 p-3">
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
                           <div className="space-y-0.5">
                             <FormLabel className="text-base">Bestseller</FormLabel>
                             <FormDescription>Mark as bestseller</FormDescription>
@@ -1267,7 +1384,7 @@ export default function AdminBooksPage() {
                       control={form.control}
                       name="is_new_release"
                       render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border border-gray-200 p-3">
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
                           <div className="space-y-0.5">
                             <FormLabel className="text-base">New Release</FormLabel>
                             <FormDescription>Mark as new</FormDescription>

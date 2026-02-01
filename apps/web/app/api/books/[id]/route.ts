@@ -29,26 +29,44 @@ interface BookWithDetails {
   format: string | null;
   stock_quantity: number | null;
   status: string | null;
+  categories: string[] | null;
   authors: {
     id: string;
     name: string;
     bio: string | null;
     avatar_url: string | null;
   };
-  book_categories?: Array<{
-    categories: {
-      id: string;
-      name: string;
-      slug: string;
-      description: string | null;
-    };
-  }>;
+}
+
+interface CategoryDetails {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  book_count: number;
 }
 
 /**
  * Transform BookWithDetails to Book type for frontend consumption
  */
-function transformBookToBookType(dbBook: BookWithDetails) {
+async function transformBookToBookType(dbBook: BookWithDetails, supabase: any) {
+  // Fetch category details if categories exist
+  let categoryDetails = [];
+  if (dbBook.categories && dbBook.categories.length > 0) {
+    const { data: cats } = await supabase
+      .from('categories')
+      .select('id, name, slug, description, book_count')
+      .in('id', dbBook.categories);
+    categoryDetails = cats?.map((cat: CategoryDetails) => ({
+      id: cat.id,
+      name: cat.name,
+      slug: cat.slug,
+      icon: '📚',
+      bookCount: cat.book_count || 0,
+      description: cat.description,
+    })) || [];
+  }
+
   return {
     id: dbBook.id,
     title: dbBook.title,
@@ -63,14 +81,7 @@ function transformBookToBookType(dbBook: BookWithDetails) {
     originalPrice: dbBook.original_price ?? undefined,
     discountPercentage: dbBook.discount_percentage ?? undefined,
     description: dbBook.description ?? '',
-    categories: dbBook.book_categories?.map(bc => ({
-      id: bc.categories.id,
-      name: bc.categories.name,
-      slug: bc.categories.slug,
-      icon: '📚',
-      bookCount: 0,
-      description: bc.categories.description ?? undefined,
-    })) ?? [],
+    categories: categoryDetails,
     rating: dbBook.rating ?? 0,
     publishedDate: new Date(dbBook.published_date || dbBook.created_at),
     isbn: dbBook.isbn ?? '',
@@ -98,14 +109,6 @@ export async function GET(
           name,
           bio,
           avatar_url
-        ),
-        book_categories (
-          categories (
-            id,
-            name,
-            slug,
-            description
-          )
         )
       `)
       .eq('id', id)
@@ -115,7 +118,7 @@ export async function GET(
       return NextResponse.json({ error: error.message }, { status: 404 });
     }
 
-    const book = transformBookToBookType(data as BookWithDetails);
+    const book = await transformBookToBookType(data as BookWithDetails, supabase);
     return NextResponse.json({ data: book });
   } catch (error) {
     return NextResponse.json(
@@ -133,11 +136,21 @@ export async function PATCH(
   try {
     const supabase = getSupabaseServerClient();
     const { id } = await params;
-    const body: BookUpdate = await request.json();
+    const body: BookUpdate & { categories?: string[] } = await request.json();
+
+    // Get current book to compare categories
+    const { data: currentBook } = await supabase
+      .from('books')
+      .select('categories')
+      .eq('id', id)
+      .single();
 
     const { data, error } = await supabase
       .from('books')
-      .update(body)
+      .update({
+        ...body,
+        categories: body.categories !== undefined ? body.categories : currentBook?.categories,
+      })
       .eq('id', id)
       .select(`
         *,
@@ -150,6 +163,24 @@ export async function PATCH(
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    // Update category counts if categories changed
+    if (body.categories !== undefined && currentBook) {
+      const oldCategories = currentBook.categories || [];
+      const newCategories = body.categories || [];
+
+      // Decrement old categories that are no longer selected
+      const toDecrement = oldCategories.filter((id: string) => !newCategories.includes(id));
+      if (toDecrement.length > 0) {
+        await supabase.rpc('decrement_category_counts', { category_ids: toDecrement });
+      }
+
+      // Increment new categories that weren't previously selected
+      const toIncrement = newCategories.filter((id: string) => !oldCategories.includes(id));
+      if (toIncrement.length > 0) {
+        await supabase.rpc('increment_category_counts', { category_ids: toIncrement });
+      }
     }
 
     return NextResponse.json({ data });
@@ -170,6 +201,14 @@ export async function DELETE(
     const supabase = getSupabaseServerAdminClient();
     const { id } = await params;
 
+    // Get book categories before deletion to decrement counts
+    const { data: book } = await supabase
+      .from('books')
+      .select('categories')
+      .eq('id', id)
+      .single();
+
+    // Delete the book
     const { error } = await supabase
       .from('books')
       .delete()
@@ -177,6 +216,11 @@ export async function DELETE(
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    // Decrement category counts
+    if (book?.categories && book.categories.length > 0) {
+      await supabase.rpc('decrement_category_counts', { category_ids: book.categories });
     }
 
     return NextResponse.json({ success: true });

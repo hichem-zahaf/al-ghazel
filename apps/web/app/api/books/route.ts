@@ -65,11 +65,14 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const supabase = getSupabaseServerClient();
-    const body: BookInsert = await request.json();
+    const body: BookInsert & { categories?: string[] } = await request.json();
 
     const { data, error } = await supabase
       .from('books')
-      .insert(body)
+      .insert({
+        ...body,
+        categories: body.categories || [],
+      })
       .select(`
         *,
         authors (
@@ -81,6 +84,11 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    // Update category book counts
+    if (body.categories && body.categories.length > 0) {
+      await supabase.rpc('increment_category_counts', { category_ids: body.categories });
     }
 
     return NextResponse.json({ data }, { status: 201 });

@@ -242,6 +242,7 @@ export type Database = {
       books: {
         Row: {
           author_id: string
+          categories: string[] | null
           cover_image_url: string | null
           created_at: string | null
           created_by: string | null
@@ -271,6 +272,7 @@ export type Database = {
         }
         Insert: {
           author_id: string
+          categories?: string[] | null
           cover_image_url?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -300,6 +302,7 @@ export type Database = {
         }
         Update: {
           author_id?: string
+          categories?: string[] | null
           cover_image_url?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -1054,6 +1057,10 @@ export type Database = {
         }
         Returns: string
       }
+      decrement_category_counts: {
+        Args: { category_ids: string[] }
+        Returns: undefined
+      }
       get_or_create_cart: {
         Args: { user_id?: string }
         Returns: string
@@ -1119,6 +1126,10 @@ export type Database = {
       }
       increment_author_interest: {
         Args: { p_account_id: string; p_amount?: number; p_author_id: string }
+        Returns: undefined
+      }
+      increment_category_counts: {
+        Args: { category_ids: string[] }
         Returns: undefined
       }
       save_checkout_data: {
