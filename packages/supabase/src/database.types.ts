@@ -36,6 +36,7 @@ export type Database = {
     Tables: {
       accounts: {
         Row: {
+          checkout_data: Json | null
           created_at: string | null
           created_by: string | null
           email: string | null
@@ -47,6 +48,7 @@ export type Database = {
           updated_by: string | null
         }
         Insert: {
+          checkout_data?: Json | null
           created_at?: string | null
           created_by?: string | null
           email?: string | null
@@ -58,6 +60,7 @@ export type Database = {
           updated_by?: string | null
         }
         Update: {
+          checkout_data?: Json | null
           created_at?: string | null
           created_by?: string | null
           email?: string | null
@@ -622,16 +625,18 @@ export type Database = {
       }
       orders: {
         Row: {
-          account_id: string
+          account_id: string | null
           actual_delivery_date: string | null
           admin_notes: string | null
           carrier: string | null
+          city: string | null
           coupon_code: string | null
           created_at: string | null
           created_by: string | null
           currency: string | null
           customer_notes: string | null
           delivery_status: Database["public"]["Enums"]["delivery_status"] | null
+          delivery_type: string | null
           discount_amount: number | null
           estimated_delivery_date: string | null
           id: string
@@ -647,7 +652,7 @@ export type Database = {
           shipping_email: string
           shipping_name: string
           shipping_phone: string | null
-          shipping_postal_code: string
+          shipping_postal_code: string | null
           shipping_state: string | null
           status: Database["public"]["Enums"]["order_status"] | null
           subtotal: number
@@ -656,12 +661,14 @@ export type Database = {
           tracking_number: string | null
           updated_at: string | null
           updated_by: string | null
+          wilaya_code: string | null
         }
         Insert: {
-          account_id: string
+          account_id?: string | null
           actual_delivery_date?: string | null
           admin_notes?: string | null
           carrier?: string | null
+          city?: string | null
           coupon_code?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -670,6 +677,7 @@ export type Database = {
           delivery_status?:
             | Database["public"]["Enums"]["delivery_status"]
             | null
+          delivery_type?: string | null
           discount_amount?: number | null
           estimated_delivery_date?: string | null
           id?: string
@@ -685,7 +693,7 @@ export type Database = {
           shipping_email: string
           shipping_name: string
           shipping_phone?: string | null
-          shipping_postal_code: string
+          shipping_postal_code?: string | null
           shipping_state?: string | null
           status?: Database["public"]["Enums"]["order_status"] | null
           subtotal: number
@@ -694,12 +702,14 @@ export type Database = {
           tracking_number?: string | null
           updated_at?: string | null
           updated_by?: string | null
+          wilaya_code?: string | null
         }
         Update: {
-          account_id?: string
+          account_id?: string | null
           actual_delivery_date?: string | null
           admin_notes?: string | null
           carrier?: string | null
+          city?: string | null
           coupon_code?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -708,6 +718,7 @@ export type Database = {
           delivery_status?:
             | Database["public"]["Enums"]["delivery_status"]
             | null
+          delivery_type?: string | null
           discount_amount?: number | null
           estimated_delivery_date?: string | null
           id?: string
@@ -723,7 +734,7 @@ export type Database = {
           shipping_email?: string
           shipping_name?: string
           shipping_phone?: string | null
-          shipping_postal_code?: string
+          shipping_postal_code?: string | null
           shipping_state?: string | null
           status?: Database["public"]["Enums"]["order_status"] | null
           subtotal?: number
@@ -732,6 +743,7 @@ export type Database = {
           tracking_number?: string | null
           updated_at?: string | null
           updated_by?: string | null
+          wilaya_code?: string | null
         }
         Relationships: [
           {
@@ -1046,6 +1058,32 @@ export type Database = {
         Args: { user_id?: string }
         Returns: string
       }
+      get_order_by_tracking_number: {
+        Args: { tracking_number_param: string }
+        Returns: {
+          city: string
+          created_at: string
+          currency: string
+          delivery_status: Database["public"]["Enums"]["delivery_status"]
+          delivery_type: string
+          discount_amount: number
+          id: string
+          order_number: string
+          shipping_address_line1: string
+          shipping_amount: number
+          shipping_city: string
+          shipping_country: string
+          shipping_email: string
+          shipping_name: string
+          shipping_phone: string
+          shipping_state: string
+          status: Database["public"]["Enums"]["order_status"]
+          subtotal: number
+          total: number
+          tracking_number: string
+          wilaya_code: string
+        }[]
+      }
       get_preferred_authors: {
         Args: { p_account_id: string; p_min_level?: number }
         Returns: {
@@ -1081,6 +1119,18 @@ export type Database = {
       }
       increment_author_interest: {
         Args: { p_account_id: string; p_amount?: number; p_author_id: string }
+        Returns: undefined
+      }
+      save_checkout_data: {
+        Args: {
+          checkout_address_line: string
+          checkout_city: string
+          checkout_delivery_type: string
+          checkout_email: string
+          checkout_phone: string
+          checkout_wilaya_code: string
+          user_account_id: string
+        }
         Returns: undefined
       }
       set_limit: {

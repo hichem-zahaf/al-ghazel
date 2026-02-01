@@ -129,3 +129,136 @@ export interface CartStore extends CartState {
   syncWithServer: () => Promise<void>;
   initializeCart: () => void;
 }
+
+// ============================================================================
+// Algeria Location Types
+// ============================================================================
+
+export interface Wilaya {
+  wilaya_code: string;
+  wilaya_name: string;
+  wilaya_name_ascii: string;
+}
+
+export interface City {
+  id: number;
+  commune_name: string;
+  commune_name_ascii: string;
+  daira_name: string;
+  daira_name_ascii: string;
+  wilaya_code: string;
+  wilaya_name: string;
+  wilaya_name_ascii: string;
+}
+
+// ============================================================================
+// Checkout Types
+// ============================================================================
+
+export type DeliveryType = 'home_delivery' | 'office_delivery';
+export type PaymentMethod = 'payment_on_delivery';
+
+export type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'refunded';
+export type DeliveryStatus = 'preparing' | 'in_transit' | 'out_for_delivery' | 'delivered' | 'failed' | 'returned';
+export type PaymentStatus = 'pending' | 'completed' | 'failed' | 'refunded';
+
+export interface CheckoutFormData {
+  // Contact
+  email: string;
+  phone: string;
+  // Address
+  wilayaCode: string;
+  city: string;
+  addressLine: string;
+  // Delivery
+  deliveryType: DeliveryType;
+  deliveryNotes?: string;
+  // Payment
+  paymentMethod: PaymentMethod;
+  // Coupon
+  couponCode?: string;
+  // Items
+  items: CartItem[];
+}
+
+export interface SavedCheckoutData {
+  email?: string;
+  phone?: string;
+  wilayaCode?: string;
+  city?: string;
+  addressLine?: string;
+  deliveryType?: DeliveryType;
+  updatedAt?: string;
+}
+
+export interface OrderItem {
+  id: string;
+  bookId: string;
+  book: {
+    title: string;
+    coverImage: string;
+    author: {
+      name: string;
+    };
+  };
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+}
+
+export interface ShippingAddress {
+  name: string;
+  email: string;
+  phone: string;
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  state: string;
+  wilayaCode: string;
+  country: string;
+  postalCode?: string;
+}
+
+export interface Order {
+  id: string;
+  orderNumber: string;
+  trackingNumber: string;
+  status: OrderStatus;
+  deliveryStatus: DeliveryStatus;
+  paymentStatus: PaymentStatus;
+  createdAt: Date;
+  estimatedDeliveryDate?: Date;
+  items: OrderItem[];
+  shippingAddress: ShippingAddress;
+  deliveryType: DeliveryType;
+  subtotal: number;
+  discountAmount: number;
+  shippingAmount: number;
+  total: number;
+  currency: string;
+  couponCode?: string;
+  customerNotes?: string;
+}
+
+export interface CreateOrderRequest {
+  email: string;
+  phone: string;
+  wilayaCode: string;
+  city: string;
+  addressLine: string;
+  deliveryType: DeliveryType;
+  deliveryNotes?: string;
+  paymentMethod: PaymentMethod;
+  couponCode?: string;
+  items: CartItem[];
+}
+
+export interface CreateOrderResponse {
+  success: boolean;
+  order?: {
+    id: string;
+    orderNumber: string;
+    trackingNumber: string | null;
+  };
+  error?: string;
+}

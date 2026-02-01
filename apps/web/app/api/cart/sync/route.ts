@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
             price,
             original_price,
             discount_percentage,
-            cover_image,
+            cover_image_url,
             authors (
               id,
               name
@@ -128,7 +128,7 @@ export async function GET(request: NextRequest) {
         price: parseFloat(item.books.price),
         originalPrice: item.books.original_price ? parseFloat(item.books.original_price) : undefined,
         discountPercentage: item.books.discount_percentage,
-        coverImage: item.books.cover_image,
+        coverImage: item.books.cover_image_url,
         author: {
           id: item.books.authors.id,
           name: item.books.authors.name,

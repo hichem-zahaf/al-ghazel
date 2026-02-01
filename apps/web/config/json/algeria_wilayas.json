@@ -1,0 +1,292 @@
+[
+  {
+    "wilaya_code": "01",
+    "wilaya_name": "أدرار",
+    "wilaya_name_ascii": "Adrar"
+  },
+  {
+    "wilaya_code": "02",
+    "wilaya_name": " الشلف",
+    "wilaya_name_ascii": "Chlef"
+  },
+  {
+    "wilaya_code": "03",
+    "wilaya_name": "الأغواط",
+    "wilaya_name_ascii": "Laghouat"
+  },
+  {
+    "wilaya_code": "04",
+    "wilaya_name": "أم البواقي",
+    "wilaya_name_ascii": "Oum El Bouaghi"
+  },
+  {
+    "wilaya_code": "05",
+    "wilaya_name": "باتنة",
+    "wilaya_name_ascii": "Batna"
+  },
+  {
+    "wilaya_code": "06",
+    "wilaya_name": " بجاية",
+    "wilaya_name_ascii": "Béjaïa"
+  },
+  {
+    "wilaya_code": "07",
+    "wilaya_name": "بسكرة",
+    "wilaya_name_ascii": "Biskra"
+  },
+  {
+    "wilaya_code": "08",
+    "wilaya_name": "بشار",
+    "wilaya_name_ascii": "Béchar"
+  },
+  {
+    "wilaya_code": "09",
+    "wilaya_name": "البليدة",
+    "wilaya_name_ascii": "Blida"
+  },
+  {
+    "wilaya_code": "10",
+    "wilaya_name": "البويرة",
+    "wilaya_name_ascii": "Bouira"
+  },
+  {
+    "wilaya_code": "11",
+    "wilaya_name": "تمنراست",
+    "wilaya_name_ascii": "Tamanrasset"
+  },
+  {
+    "wilaya_code": "12",
+    "wilaya_name": "تبسة",
+    "wilaya_name_ascii": "Tébessa"
+  },
+  {
+    "wilaya_code": "13",
+    "wilaya_name": "تلمسان",
+    "wilaya_name_ascii": "Tlemcen"
+  },
+  {
+    "wilaya_code": "14",
+    "wilaya_name": "تيارت",
+    "wilaya_name_ascii": "Tiaret"
+  },
+  {
+    "wilaya_code": "15",
+    "wilaya_name": "تيزي وزو",
+    "wilaya_name_ascii": "Tizi Ouzou"
+  },
+  {
+    "wilaya_code": "16",
+    "wilaya_name": "الجزائر",
+    "wilaya_name_ascii": "Alger"
+  },
+  {
+    "wilaya_code": "17",
+    "wilaya_name": "الجلفة",
+    "wilaya_name_ascii": "Djelfa"
+  },
+  {
+    "wilaya_code": "18",
+    "wilaya_name": "جيجل",
+    "wilaya_name_ascii": "Jijel"
+  },
+  {
+    "wilaya_code": "19",
+    "wilaya_name": "سطيف",
+    "wilaya_name_ascii": "Sétif"
+  },
+  {
+    "wilaya_code": "20",
+    "wilaya_name": "سعيدة",
+    "wilaya_name_ascii": "Saïda"
+  },
+  {
+    "wilaya_code": "21",
+    "wilaya_name": "سكيكدة",
+    "wilaya_name_ascii": "Skikda"
+  },
+  {
+    "wilaya_code": "22",
+    "wilaya_name": "سيدي بلعباس",
+    "wilaya_name_ascii": "Sidi Bel Abbès"
+  },
+  {
+    "wilaya_code": "23",
+    "wilaya_name": "عنابة",
+    "wilaya_name_ascii": "Annaba"
+  },
+  {
+    "wilaya_code": "24",
+    "wilaya_name": "قالمة",
+    "wilaya_name_ascii": "Guelma"
+  },
+  {
+    "wilaya_code": "25",
+    "wilaya_name": "قسنطينة",
+    "wilaya_name_ascii": "Constantine"
+  },
+  {
+    "wilaya_code": "26",
+    "wilaya_name": "المدية",
+    "wilaya_name_ascii": "Médéa"
+  },
+  {
+    "wilaya_code": "27",
+    "wilaya_name": "مستغانم",
+    "wilaya_name_ascii": "Mostaganem"
+  },
+  {
+    "wilaya_code": "28",
+    "wilaya_name": "المسيلة",
+    "wilaya_name_ascii": "M'Sila"
+  },
+  {
+    "wilaya_code": "29",
+    "wilaya_name": "معسكر",
+    "wilaya_name_ascii": "Mascara"
+  },
+  {
+    "wilaya_code": "30",
+    "wilaya_name": "ورقلة",
+    "wilaya_name_ascii": "Ouargla"
+  },
+  {
+    "wilaya_code": "31",
+    "wilaya_name": "وهران",
+    "wilaya_name_ascii": "Oran"
+  },
+  {
+    "wilaya_code": "32",
+    "wilaya_name": "البيض",
+    "wilaya_name_ascii": "El Bayadh"
+  },
+  {
+    "wilaya_code": "33",
+    "wilaya_name": "إليزي",
+    "wilaya_name_ascii": "Illizi"
+  },
+  {
+    "wilaya_code": "34",
+    "wilaya_name": "برج بوعريريج",
+    "wilaya_name_ascii": "Bordj Bou Arreridj"
+  },
+  {
+    "wilaya_code": "35",
+    "wilaya_name": "بومرداس",
+    "wilaya_name_ascii": "Boumerdès"
+  },
+  {
+    "wilaya_code": "36",
+    "wilaya_name": "الطارف",
+    "wilaya_name_ascii": "El Tarf"
+  },
+  {
+    "wilaya_code": "37",
+    "wilaya_name": "تندوف",
+    "wilaya_name_ascii": "Tindouf"
+  },
+  {
+    "wilaya_code": "38",
+    "wilaya_name": "تيسمسيلت",
+    "wilaya_name_ascii": "Tissemsilt"
+  },
+  {
+    "wilaya_code": "39",
+    "wilaya_name": "الوادي",
+    "wilaya_name_ascii": "El Oued"
+  },
+  {
+    "wilaya_code": "40",
+    "wilaya_name": "خنشلة",
+    "wilaya_name_ascii": "Khenchela"
+  },
+  {
+    "wilaya_code": "41",
+    "wilaya_name": "سوق أهراس",
+    "wilaya_name_ascii": "Souk Ahras"
+  },
+  {
+    "wilaya_code": "42",
+    "wilaya_name": "تيبازة",
+    "wilaya_name_ascii": "Tipaza"
+  },
+  {
+    "wilaya_code": "43",
+    "wilaya_name": "ميلة",
+    "wilaya_name_ascii": "Mila"
+  },
+  {
+    "wilaya_code": "44",
+    "wilaya_name": "عين الدفلة",
+    "wilaya_name_ascii": "Aïn Defla"
+  },
+  {
+    "wilaya_code": "45",
+    "wilaya_name": "النعامة",
+    "wilaya_name_ascii": "Naâma"
+  },
+  {
+    "wilaya_code": "46",
+    "wilaya_name": "عين تيموشنت",
+    "wilaya_name_ascii": "Aïn Témouchent"
+  },
+  {
+    "wilaya_code": "47",
+    "wilaya_name": "غرداية",
+    "wilaya_name_ascii": "Ghardaïa"
+  },
+  {
+    "wilaya_code": "48",
+    "wilaya_name": "غليزان",
+    "wilaya_name_ascii": "Relizane"
+  },
+  {
+    "wilaya_code": "49",
+    "wilaya_name": "تيميمون",
+    "wilaya_name_ascii": "Timimoun"
+  },
+  {
+    "wilaya_code": "50",
+    "wilaya_name": "برج باجي مختار",
+    "wilaya_name_ascii": "Bordj Badji Mokhtar"
+  },
+  {
+    "wilaya_code": "51",
+    "wilaya_name": "أولاد جلال",
+    "wilaya_name_ascii": "Ouled Djellal"
+  },
+  {
+    "wilaya_code": "52",
+    "wilaya_name": "بني عباس",
+    "wilaya_name_ascii": "Béni Abbès"
+  },
+  {
+    "wilaya_code": "53",
+    "wilaya_name": "عين صالح",
+    "wilaya_name_ascii": "In Salah"
+  },
+  {
+    "wilaya_code": "54",
+    "wilaya_name": "عين قزام",
+    "wilaya_name_ascii": "In Guezzam"
+  },
+  {
+    "wilaya_code": "55",
+    "wilaya_name": "تقرت",
+    "wilaya_name_ascii": "Touggourt"
+  },
+  {
+    "wilaya_code": "56",
+    "wilaya_name": "جانت",
+    "wilaya_name_ascii": "Djanet"
+  },
+  {
+    "wilaya_code": "57",
+    "wilaya_name": "المغير",
+    "wilaya_name_ascii": "El Meghaier"
+  },
+  {
+    "wilaya_code": "58",
+    "wilaya_name": "المنيعة",
+    "wilaya_name_ascii": "El Menia"
+  }
+]
