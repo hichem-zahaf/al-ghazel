@@ -16,6 +16,23 @@ CREATE TABLE IF NOT EXISTS public.ai_config (
   ollama_model VARCHAR(255),
   api_key TEXT,
   model VARCHAR(255),
+
+  -- Model parameters for cloud providers
+  temperature DECIMAL(3,2) DEFAULT 0.7 CHECK (temperature >= 0 AND temperature <= 1),
+  top_p DECIMAL(3,2) DEFAULT 0.9 CHECK (top_p >= 0 AND top_p <= 1),
+
+  -- Feature toggles
+  enable_rag BOOLEAN DEFAULT true,
+  enable_book_recommend BOOLEAN DEFAULT true,
+  enable_book_search BOOLEAN DEFAULT true,
+  enable_user_access BOOLEAN DEFAULT true,
+
+  -- User credits (0 means unlimited)
+  user_credits_limit INTEGER DEFAULT 0 CHECK (user_credits_limit >= 0),
+
+  -- System prompt
+  system_prompt TEXT DEFAULT 'You are a helpful AI assistant for a bookstore. Provide personalized book recommendations and help users discover their next great read.',
+
   config JSONB DEFAULT '{}'::JSONB,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -31,6 +48,14 @@ COMMENT ON COLUMN public.ai_config.ollama_url IS 'Ollama instance URL for local 
 COMMENT ON COLUMN public.ai_config.ollama_model IS 'Selected Ollama model name';
 COMMENT ON COLUMN public.ai_config.api_key IS 'API key for cloud provider (encrypted)';
 COMMENT ON COLUMN public.ai_config.model IS 'Model name/identifier';
+COMMENT ON COLUMN public.ai_config.temperature IS 'Temperature for model output (0.0 - 1.0, higher = more creative)';
+COMMENT ON COLUMN public.ai_config.top_p IS 'Top-p sampling for model output (0.0 - 1.0, lower = more focused)';
+COMMENT ON COLUMN public.ai_config.enable_rag IS 'Enable Retrieval-Augmented Generation for better context';
+COMMENT ON COLUMN public.ai_config.enable_book_recommend IS 'Enable AI-powered book recommendations';
+COMMENT ON COLUMN public.ai_config.enable_book_search IS 'Enable AI-powered book search';
+COMMENT ON COLUMN public.ai_config.enable_user_access IS 'Allow users to access AI features';
+COMMENT ON COLUMN public.ai_config.user_credits_limit IS 'Daily credit limit per user (0 = unlimited)';
+COMMENT ON COLUMN public.ai_config.system_prompt IS 'Custom system prompt for the AI model';
 COMMENT ON COLUMN public.ai_config.config IS 'Additional configuration settings stored as JSON';
 
 -- Create index for deployment type
@@ -54,18 +79,33 @@ FOR EACH ROW
 EXECUTE FUNCTION public.update_ai_config_updated_at();
 
 -- Insert default AI configuration
-INSERT INTO public.ai_config (deployment_type, cloud_provider, model, config) VALUES
-  (
-    'cloud',
-    'openai',
-    'gpt-4o-mini',
-    '{
-      "temperature": 0.7,
-      "maxTokens": 1000,
-      "enabled": true
-    }'::JSONB
-  )
-ON CONFLICT DO NOTHING;
+INSERT INTO public.ai_config (
+  deployment_type,
+  cloud_provider,
+  model,
+  temperature,
+  top_p,
+  enable_rag,
+  enable_book_recommend,
+  enable_book_search,
+  enable_user_access,
+  user_credits_limit,
+  system_prompt,
+  config
+) VALUES (
+  'cloud',
+  'openai',
+  'gpt-4o-mini',
+  0.7,
+  0.9,
+  true,
+  true,
+  true,
+  true,
+  0,
+  'You are a helpful AI assistant for a bookstore. Provide personalized book recommendations and help users discover their next great read.',
+  '{"maxTokens": 1000}'::JSONB
+) ON CONFLICT DO NOTHING;
 
 -- Enable RLS
 ALTER TABLE public.ai_config ENABLE ROW LEVEL SECURITY;

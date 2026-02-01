@@ -147,6 +147,14 @@ interface AIConfig {
   ollama_url: string | null;
   ollama_model: string | null;
   model: string | null;
+  temperature: number | null;
+  top_p: number | null;
+  enable_rag: boolean | null;
+  enable_book_recommend: boolean | null;
+  enable_book_search: boolean | null;
+  enable_user_access: boolean | null;
+  user_credits_limit: number | null;
+  system_prompt: string | null;
   config: Record<string, unknown>;
 }
 
@@ -987,6 +995,14 @@ function AdminSettingsPage() {
     ollama_url: null,
     ollama_model: null,
     model: 'gpt-4o-mini',
+    temperature: 0.7,
+    top_p: 0.9,
+    enable_rag: true,
+    enable_book_recommend: true,
+    enable_book_search: true,
+    enable_user_access: true,
+    user_credits_limit: 0,
+    system_prompt: 'You are a helpful AI assistant for a bookstore. Provide personalized book recommendations and help users discover their next great read.',
     config: {},
   });
   const [originalAiConfig, setOriginalAiConfig] = useState<AIConfig | null>(null);
@@ -1079,6 +1095,14 @@ function AdminSettingsPage() {
           ollama_url: result.data.ollama_url || null,
           ollama_model: result.data.ollama_model || null,
           model: result.data.model || 'gpt-4o-mini',
+          temperature: result.data.temperature ?? 0.7,
+          top_p: result.data.top_p ?? 0.9,
+          enable_rag: result.data.enable_rag ?? true,
+          enable_book_recommend: result.data.enable_book_recommend ?? true,
+          enable_book_search: result.data.enable_book_search ?? true,
+          enable_user_access: result.data.enable_user_access ?? true,
+          user_credits_limit: result.data.user_credits_limit ?? 0,
+          system_prompt: result.data.system_prompt || 'You are a helpful AI assistant for a bookstore. Provide personalized book recommendations and help users discover their next great read.',
           config: result.data.config || {},
         };
         setAiConfig(config);
@@ -1290,12 +1314,15 @@ function AdminSettingsPage() {
     }
   }, [activeTab, fetchHomepageConfig, fetchReferenceData]);
 
-  // Check for unsaved AI changes
+  // Check for unsaved AI changes (debounced for performance)
   useEffect(() => {
-    if (originalAiConfig) {
-      const hasChanges = JSON.stringify(aiConfig) !== JSON.stringify(originalAiConfig);
-      setHasUnsavedChanges(hasChanges);
-    }
+    const timeoutId = setTimeout(() => {
+      if (originalAiConfig) {
+        const hasChanges = JSON.stringify(aiConfig) !== JSON.stringify(originalAiConfig);
+        setHasUnsavedChanges(hasChanges);
+      }
+    }, 300);
+    return () => clearTimeout(timeoutId);
   }, [aiConfig, originalAiConfig]);
 
   // Check for unsaved changes
@@ -1522,160 +1549,333 @@ function AdminSettingsPage() {
                 </CardContent>
               </Card>
             ) : (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Provider Settings</CardTitle>
-                  <CardDescription>Choose between cloud-based or local AI deployment</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {/* Deployment Type Selection */}
-                  <div className="space-y-3">
-                    <Label>Deployment Type</Label>
-                    <div className="grid grid-cols-2 gap-4">
-                      <button
-                        type="button"
-                        onClick={() => setAiConfig((prev) => ({ ...prev, deployment_type: 'cloud' }))}
-                        className={cn(
-                          'p-4 rounded-lg border-2 text-left transition-all',
-                          aiConfig.deployment_type === 'cloud'
-                            ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/20'
-                            : 'border-border hover:border-orange-300'
-                        )}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={cn(
-                            'h-5 w-5 rounded-full border-2 flex items-center justify-center',
+              <>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Provider Settings</CardTitle>
+                    <CardDescription>Choose between cloud-based or local AI deployment</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {/* Deployment Type Selection */}
+                    <div className="space-y-3">
+                      <Label>Deployment Type</Label>
+                      <div className="grid grid-cols-2 gap-4">
+                        <button
+                          type="button"
+                          onClick={() => setAiConfig((prev) => ({ ...prev, deployment_type: 'cloud' }))}
+                          className={cn(
+                            'p-4 rounded-lg border-2 text-left transition-all',
                             aiConfig.deployment_type === 'cloud'
-                              ? 'border-orange-500 bg-orange-500'
-                              : 'border-muted-foreground'
-                          )}>
-                            {aiConfig.deployment_type === 'cloud' && (
-                              <div className="h-2 w-2 rounded-full bg-white" />
-                            )}
+                              ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/20'
+                              : 'border-border hover:border-orange-300'
+                          )}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={cn(
+                              'h-5 w-5 rounded-full border-2 flex items-center justify-center',
+                              aiConfig.deployment_type === 'cloud'
+                                ? 'border-orange-500 bg-orange-500'
+                                : 'border-muted-foreground'
+                            )}>
+                              {aiConfig.deployment_type === 'cloud' && (
+                                <div className="h-2 w-2 rounded-full bg-white" />
+                              )}
+                            </div>
+                            <div>
+                              <p className="font-semibold">Cloud</p>
+                              <p className="text-sm text-muted-foreground">Use cloud-based AI providers</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-semibold">Cloud</p>
-                            <p className="text-sm text-muted-foreground">Use cloud-based AI providers</p>
-                          </div>
-                        </div>
-                      </button>
+                        </button>
 
-                      <button
-                        type="button"
-                        onClick={() => setAiConfig((prev) => ({ ...prev, deployment_type: 'local' }))}
-                        className={cn(
-                          'p-4 rounded-lg border-2 text-left transition-all',
-                          aiConfig.deployment_type === 'local'
-                            ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/20'
-                            : 'border-border hover:border-orange-300'
-                        )}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={cn(
-                            'h-5 w-5 rounded-full border-2 flex items-center justify-center',
+                        <button
+                          type="button"
+                          onClick={() => setAiConfig((prev) => ({ ...prev, deployment_type: 'local' }))}
+                          className={cn(
+                            'p-4 rounded-lg border-2 text-left transition-all',
                             aiConfig.deployment_type === 'local'
-                              ? 'border-orange-500 bg-orange-500'
-                              : 'border-muted-foreground'
-                          )}>
-                            {aiConfig.deployment_type === 'local' && (
-                              <div className="h-2 w-2 rounded-full bg-white" />
-                            )}
+                              ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/20'
+                              : 'border-border hover:border-orange-300'
+                          )}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={cn(
+                              'h-5 w-5 rounded-full border-2 flex items-center justify-center',
+                              aiConfig.deployment_type === 'local'
+                                ? 'border-orange-500 bg-orange-500'
+                                : 'border-muted-foreground'
+                            )}>
+                              {aiConfig.deployment_type === 'local' && (
+                                <div className="h-2 w-2 rounded-full bg-white" />
+                              )}
+                            </div>
+                            <div>
+                              <p className="font-semibold">Local</p>
+                              <p className="text-sm text-muted-foreground">Self-hosted AI models</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-semibold">Local</p>
-                            <p className="text-sm text-muted-foreground">Self-hosted AI models</p>
-                          </div>
-                        </div>
-                      </button>
+                        </button>
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Cloud Provider Selection */}
-                  {aiConfig.deployment_type === 'cloud' && (
-                    <div className="space-y-2">
-                      <Label htmlFor="cloud-provider">Cloud Provider</Label>
-                      <Select
-                        value={aiConfig.cloud_provider || 'openai'}
-                        onValueChange={(value: 'deepseek' | 'openai' | 'zai') =>
-                          setAiConfig((prev) => ({ ...prev, cloud_provider: value }))
-                        }
-                      >
-                        <SelectTrigger id="cloud-provider">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="openai">OpenAI</SelectItem>
-                          <SelectItem value="deepseek">DeepSeek</SelectItem>
-                          <SelectItem value="zai">Zai</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-muted-foreground">
-                        Select your preferred cloud AI provider
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Local Provider (Ollama) */}
-                  {aiConfig.deployment_type === 'local' && (
-                    <div className="space-y-4">
+                    {/* Cloud Provider Selection */}
+                    {aiConfig.deployment_type === 'cloud' && (
                       <div className="space-y-2">
-                        <Label htmlFor="ollama-url">Ollama URL</Label>
-                        <div className="flex gap-2">
-                          <Input
-                            id="ollama-url"
-                            placeholder="http://localhost:11434"
-                            value={aiConfig.ollama_url || ''}
-                            onChange={(e) => setAiConfig((prev) => ({ ...prev, ollama_url: e.target.value }))}
-                          />
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => aiConfig.ollama_url && fetchOllamaModels(aiConfig.ollama_url)}
-                            disabled={!aiConfig.ollama_url || isLoadingOllamaModels}
-                          >
-                            {isLoadingOllamaModels ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              'Fetch Models'
-                            )}
-                          </Button>
-                        </div>
-                        {ollamaUrlError && (
-                          <p className="text-xs text-red-500">{ollamaUrlError}</p>
-                        )}
+                        <Label htmlFor="cloud-provider">Cloud Provider</Label>
+                        <Select
+                          value={aiConfig.cloud_provider || 'openai'}
+                          onValueChange={(value: 'deepseek' | 'openai' | 'zai') =>
+                            setAiConfig((prev) => ({ ...prev, cloud_provider: value }))
+                          }
+                        >
+                          <SelectTrigger id="cloud-provider">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="openai">OpenAI</SelectItem>
+                            <SelectItem value="deepseek">DeepSeek</SelectItem>
+                            <SelectItem value="zai">Zai</SelectItem>
+                          </SelectContent>
+                        </Select>
                         <p className="text-xs text-muted-foreground">
-                          Enter your Ollama instance URL to fetch available models
+                          Select your preferred cloud AI provider
                         </p>
                       </div>
+                    )}
 
-                      {/* Ollama Model Selection */}
-                      {ollamaModels.length > 0 && (
+                    {/* Local Provider (Ollama) */}
+                    {aiConfig.deployment_type === 'local' && (
+                      <div className="space-y-4">
                         <div className="space-y-2">
-                          <Label htmlFor="ollama-model">Ollama Model</Label>
-                          <Select
-                            value={aiConfig.ollama_model || ollamaModels[0]}
-                            onValueChange={(value) => setAiConfig((prev) => ({ ...prev, ollama_model: value }))}
-                          >
-                            <SelectTrigger id="ollama-model">
-                              <SelectValue placeholder="Select a model" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {ollamaModels.map((model) => (
-                                <SelectItem key={model} value={model}>
-                                  {model}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <Label htmlFor="ollama-url">Ollama URL</Label>
+                          <div className="flex gap-2">
+                            <Input
+                              id="ollama-url"
+                              placeholder="http://localhost:11434"
+                              value={aiConfig.ollama_url || ''}
+                              onChange={(e) => setAiConfig((prev) => ({ ...prev, ollama_url: e.target.value }))}
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => aiConfig.ollama_url && fetchOllamaModels(aiConfig.ollama_url)}
+                              disabled={!aiConfig.ollama_url || isLoadingOllamaModels}
+                            >
+                              {isLoadingOllamaModels ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                'Fetch Models'
+                              )}
+                            </Button>
+                          </div>
+                          {ollamaUrlError && (
+                            <p className="text-xs text-red-500">{ollamaUrlError}</p>
+                          )}
                           <p className="text-xs text-muted-foreground">
-                            Found {ollamaModels.length} model{ollamaModels.length !== 1 ? 's' : ''} available
+                            Enter your Ollama instance URL to fetch available models
                           </p>
                         </div>
-                      )}
+
+                        {/* Ollama Model Selection */}
+                        {ollamaModels.length > 0 && (
+                          <div className="space-y-2">
+                            <Label htmlFor="ollama-model">Ollama Model</Label>
+                            <Select
+                              value={aiConfig.ollama_model || ollamaModels[0]}
+                              onValueChange={(value) => setAiConfig((prev) => ({ ...prev, ollama_model: value }))}
+                            >
+                              <SelectTrigger id="ollama-model">
+                                <SelectValue placeholder="Select a model" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {ollamaModels.map((model) => (
+                                  <SelectItem key={model} value={model}>
+                                    {model}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <p className="text-xs text-muted-foreground">
+                              Found {ollamaModels.length} model{ollamaModels.length !== 1 ? 's' : ''} available
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Advanced AI Configuration Card */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Advanced Configuration</CardTitle>
+                    <CardDescription>Model parameters, feature toggles, and system prompt</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {/* Model Selection for Cloud Providers */}
+                    {aiConfig.deployment_type === 'cloud' && (
+                      <div className="space-y-2">
+                        <Label htmlFor="cloud-model">Model</Label>
+                        <Input
+                          id="cloud-model"
+                          placeholder="gpt-4o-mini"
+                          value={aiConfig.model || ''}
+                          onChange={(e) => setAiConfig((prev) => ({ ...prev, model: e.target.value }))}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Enter the model name for your selected provider (e.g., gpt-4o-mini, gpt-4o, deepseek-chat)
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Temperature Slider */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="temperature">Temperature</Label>
+                        <span className="text-sm font-mono bg-muted px-2 py-1 rounded">{(aiConfig.temperature ?? 0.7).toFixed(2)}</span>
+                      </div>
+                      <input
+                        id="temperature"
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.01"
+                        value={aiConfig.temperature ?? 0.7}
+                        onChange={(e) => setAiConfig((prev) => ({ ...prev, temperature: parseFloat(e.target.value) }))}
+                        className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-orange-600"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Controls randomness (0.0 = focused, 1.0 = creative)
+                      </p>
                     </div>
-                  )}
-                </CardContent>
-              </Card>
+
+                    {/* Top P Slider */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="top-p">Top P</Label>
+                        <span className="text-sm font-mono bg-muted px-2 py-1 rounded">{(aiConfig.top_p ?? 0.9).toFixed(2)}</span>
+                      </div>
+                      <input
+                        id="top-p"
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.05"
+                        value={aiConfig.top_p ?? 0.9}
+                        onChange={(e) => setAiConfig((prev) => ({ ...prev, top_p: parseFloat(e.target.value) }))}
+                        className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-orange-600"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Nucleus sampling threshold (lower = more focused, higher = more diverse)
+                      </p>
+                    </div>
+
+                    {/* Feature Toggles */}
+                    <div className="space-y-4">
+                      <h4 className="font-semibold text-sm">Feature Toggles</h4>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between p-3 border rounded-lg">
+                          <div>
+                            <Label htmlFor="enable-rag">Enable RAG</Label>
+                            <p className="text-xs text-muted-foreground">Use Retrieval-Augmented Generation for better context</p>
+                          </div>
+                          <Switch
+                            id="enable-rag"
+                            checked={aiConfig.enable_rag ?? true}
+                            onCheckedChange={(checked) => setAiConfig((prev) => ({ ...prev, enable_rag: checked }))}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between p-3 border rounded-lg">
+                          <div>
+                            <Label htmlFor="enable-book-recommend">Enable Book Recommendations</Label>
+                            <p className="text-xs text-muted-foreground">Allow AI to recommend books to users</p>
+                          </div>
+                          <Switch
+                            id="enable-book-recommend"
+                            checked={aiConfig.enable_book_recommend ?? true}
+                            onCheckedChange={(checked) => setAiConfig((prev) => ({ ...prev, enable_book_recommend: checked }))}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between p-3 border rounded-lg">
+                          <div>
+                            <Label htmlFor="enable-book-search">Enable Book Search</Label>
+                            <p className="text-xs text-muted-foreground">Enable AI-powered semantic book search</p>
+                          </div>
+                          <Switch
+                            id="enable-book-search"
+                            checked={aiConfig.enable_book_search ?? true}
+                            onCheckedChange={(checked) => setAiConfig((prev) => ({ ...prev, enable_book_search: checked }))}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between p-3 border rounded-lg">
+                          <div>
+                            <Label htmlFor="enable-user-access">Enable User Access</Label>
+                            <p className="text-xs text-muted-foreground">Allow users to interact with AI features</p>
+                          </div>
+                          <Switch
+                            id="enable-user-access"
+                            checked={aiConfig.enable_user_access ?? true}
+                            onCheckedChange={(checked) => setAiConfig((prev) => ({ ...prev, enable_user_access: checked }))}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* User Credits Limit */}
+                    <div className="space-y-2">
+                      <Label htmlFor="user-credits">Daily User Credits Limit</Label>
+                      <Input
+                        id="user-credits"
+                        type="number"
+                        min="0"
+                        placeholder="0"
+                        value={aiConfig.user_credits_limit ?? 0}
+                        onChange={(e) => setAiConfig((prev) => ({ ...prev, user_credits_limit: parseInt(e.target.value) || 0 }))}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Maximum AI interactions per user per day (0 = unlimited)
+                      </p>
+                    </div>
+
+                    {/* System Prompt */}
+                    <div className="space-y-2">
+                      <Label htmlFor="system-prompt">System Prompt</Label>
+                      <Textarea
+                        id="system-prompt"
+                        placeholder="You are a helpful AI assistant..."
+                        value={aiConfig.system_prompt || ''}
+                        onChange={(e) => setAiConfig((prev) => ({ ...prev, system_prompt: e.target.value }))}
+                        rows={8}
+                        className="font-mono text-sm"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Define the AI's behavior and personality. This prompt is sent with every request.
+                      </p>
+                    </div>
+
+                    {/* Reset to Defaults Button */}
+                    <div className="pt-4 border-t">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setAiConfig((prev) => ({
+                          ...prev,
+                          temperature: 0.7,
+                          top_p: 0.9,
+                          enable_rag: true,
+                          enable_book_recommend: true,
+                          enable_book_search: true,
+                          enable_user_access: true,
+                          user_credits_limit: 0,
+                          system_prompt: 'You are a helpful AI assistant for a bookstore. Provide personalized book recommendations and help users discover their next great read.',
+                        }))}
+                      >
+                        Reset to Defaults
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
             )}
           </TabsContent>
 

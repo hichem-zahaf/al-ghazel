@@ -11,6 +11,14 @@ type AIConfigUpdate = {
   ollama_model?: string | null;
   api_key?: string | null;
   model?: string | null;
+  temperature?: number | null;
+  top_p?: number | null;
+  enable_rag?: boolean | null;
+  enable_book_recommend?: boolean | null;
+  enable_book_search?: boolean | null;
+  enable_user_access?: boolean | null;
+  user_credits_limit?: number | null;
+  system_prompt?: string | null;
   config?: Json;
 };
 
@@ -23,6 +31,14 @@ type AIConfigRow = {
   ollama_model: string | null;
   api_key: string | null;
   model: string | null;
+  temperature: number | null;
+  top_p: number | null;
+  enable_rag: boolean | null;
+  enable_book_recommend: boolean | null;
+  enable_book_search: boolean | null;
+  enable_user_access: boolean | null;
+  user_credits_limit: number | null;
+  system_prompt: string | null;
   config: Json;
   created_at: string;
   updated_at: string;
@@ -55,10 +71,16 @@ export async function GET() {
           ollama_url: null,
           ollama_model: null,
           model: 'gpt-4o-mini',
+          temperature: 0.7,
+          top_p: 0.9,
+          enable_rag: true,
+          enable_book_recommend: true,
+          enable_book_search: true,
+          enable_user_access: true,
+          user_credits_limit: 0,
+          system_prompt: 'You are a helpful AI assistant for a bookstore. Provide personalized book recommendations and help users discover your next great read.',
           config: {
-            temperature: 0.7,
             maxTokens: 1000,
-            enabled: true,
           } as Json,
         },
       });
@@ -90,6 +112,14 @@ export async function POST(request: NextRequest) {
       ollama_model,
       api_key,
       model,
+      temperature,
+      top_p,
+      enable_rag,
+      enable_book_recommend,
+      enable_book_search,
+      enable_user_access,
+      user_credits_limit,
+      system_prompt,
       config,
     } = body as AIConfigUpdate;
 
@@ -126,6 +156,14 @@ export async function POST(request: NextRequest) {
       ollama_model?: string | null;
       api_key?: string | null;
       model?: string | null;
+      temperature?: number | null;
+      top_p?: number | null;
+      enable_rag?: boolean | null;
+      enable_book_recommend?: boolean | null;
+      enable_book_search?: boolean | null;
+      enable_user_access?: boolean | null;
+      user_credits_limit?: number | null;
+      system_prompt?: string | null;
       config?: Json;
       updated_at?: string;
     } = {};
@@ -137,6 +175,14 @@ export async function POST(request: NextRequest) {
     if (ollama_model !== undefined) updateData.ollama_model = ollama_model;
     if (api_key !== undefined) updateData.api_key = api_key;
     if (model !== undefined) updateData.model = model;
+    if (temperature !== undefined) updateData.temperature = temperature;
+    if (top_p !== undefined) updateData.top_p = top_p;
+    if (enable_rag !== undefined) updateData.enable_rag = enable_rag;
+    if (enable_book_recommend !== undefined) updateData.enable_book_recommend = enable_book_recommend;
+    if (enable_book_search !== undefined) updateData.enable_book_search = enable_book_search;
+    if (enable_user_access !== undefined) updateData.enable_user_access = enable_user_access;
+    if (user_credits_limit !== undefined) updateData.user_credits_limit = user_credits_limit;
+    if (system_prompt !== undefined) updateData.system_prompt = system_prompt;
     if (config !== undefined) updateData.config = config;
     updateData.updated_at = new Date().toISOString();
 
