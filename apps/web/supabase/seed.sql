@@ -31,7 +31,7 @@ DO $$
 BEGIN
   INSERT INTO public.categories (id, name, slug, icon, description, book_count)
   VALUES
-    ('aaaaaaaa-0001-0001-0001-000000000001', 'Fiction', 'fiction', 'BookOpen', 'Explore imaginary worlds and stories', 11),
+    ('aaaaaaaa-0001-0001-0001-000000000001', 'Fiction', 'fiction', 'BookOpen', 'Explore imaginary worlds and stories', 0),
     ('aaaaaaaa-0002-0002-0002-000000000002', 'Non-Fiction', 'non-fiction', 'MdAutoStories', 'Real stories and factual information', 7),
     ('aaaaaaaa-0003-0003-0003-000000000003', 'Mystery', 'mystery', 'RiSearchLine', 'Suspenseful puzzles and thrillers', 5),
     ('aaaaaaaa-0004-0004-0004-000000000004', 'Romance', 'romance', 'FaHeart', 'Love stories and relationships', 4),

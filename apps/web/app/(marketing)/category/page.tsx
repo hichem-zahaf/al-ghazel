@@ -25,17 +25,11 @@ interface BookWithDetails {
   original_price: number | null;
   discount_percentage: number | null;
   rating: number | null;
+  categories: string[] | null;
   authors: {
     id: string;
     name: string;
   };
-  book_categories?: Array<{
-    categories: {
-      id: string;
-      name: string;
-      slug: string;
-    };
-  }>;
 }
 
 interface CategoryWithBooks extends Category {
@@ -69,19 +63,13 @@ async function getCategoriesWithBooks(): Promise<CategoryWithBooks[]> {
           original_price,
           discount_percentage,
           rating,
+          categories,
           authors (
             id,
             name
-          ),
-          book_categories (
-            categories (
-              id,
-              name,
-              slug
-            )
           )
         `)
-        .filter('book_categories', 'in', `(${category.id})`)
+        .contains('categories', [category.id])
         .eq('status', 'active')
         .limit(3);
 
@@ -95,7 +83,18 @@ async function getCategoriesWithBooks(): Promise<CategoryWithBooks[]> {
   return categoriesWithBooks;
 }
 
-function transformBook(book: BookWithDetails): Book {
+function transformBook(book: BookWithDetails, allCategories: Category[]): Book {
+  // Get category details for the book's categories
+  const bookCategories = (book.categories ?? [])
+    .map((catId) => allCategories.find((c) => c.id === catId))
+    .filter((cat): cat is Category => cat !== undefined)
+    .map((cat) => ({
+      id: cat.id,
+      name: cat.name,
+      slug: cat.slug,
+      bookCount: 0,
+    }));
+
   return {
     id: book.id,
     title: book.title,
@@ -110,14 +109,7 @@ function transformBook(book: BookWithDetails): Book {
     originalPrice: book.original_price ?? undefined,
     discountPercentage: book.discount_percentage ?? undefined,
     description: book.description || '',
-    categories:
-      book.book_categories?.map((bc) => ({
-        id: bc.categories.id,
-        name: bc.categories.name,
-        slug: bc.categories.slug,
-        icon: bc.categories.icon || 'BookOpen',
-        bookCount: 0,
-      })) ?? [],
+    categories: bookCategories,
     rating: book.rating || 0,
     publishedDate: new Date(),
     isbn: '',
@@ -180,7 +172,7 @@ export default async function CategoryPage() {
                   {category.books.map((book) => (
                     <BookCard
                       key={book.id}
-                      book={transformBook(book)}
+                      book={transformBook(book, categories)}
                       variant="mercury"
                     />
                   ))}

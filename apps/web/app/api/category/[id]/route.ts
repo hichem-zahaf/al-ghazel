@@ -24,17 +24,11 @@ interface BookWithDetails {
   language: string | null;
   publisher: string | null;
   created_at: string;
+  categories: string[] | null;
   authors: {
     id: string;
     name: string;
   };
-  book_categories?: Array<{
-    categories: {
-      id: string;
-      name: string;
-      slug: string;
-    };
-  }>;
 }
 
 interface CursorData {
@@ -84,9 +78,36 @@ async function getCategoryBySlug(supabase: SupabaseClient, slug: string) {
 }
 
 /**
+ * Get all categories for mapping
+ */
+async function getAllCategories(supabase: SupabaseClient) {
+  const { data, error } = await supabase
+    .from('categories')
+    .select('id, name, slug');
+
+  if (error || !data) {
+    return [];
+  }
+
+  return data;
+}
+
+/**
  * Transform BookWithDetails to Book type for frontend consumption
  */
-function transformBookToBookType(dbBook: BookWithDetails): Book {
+function transformBookToBookType(dbBook: BookWithDetails, allCategories: Array<{ id: string; name: string; slug: string }>): Book {
+  // Get category details for the book's categories
+  const bookCategories = (dbBook.categories ?? [])
+    .map((catId) => allCategories.find((c) => c.id === catId))
+    .filter((cat): cat is { id: string; name: string; slug: string } => cat !== undefined)
+    .map((cat) => ({
+      id: cat.id,
+      name: cat.name,
+      slug: cat.slug,
+      icon: '📚',
+      bookCount: 0,
+    }));
+
   return {
     id: dbBook.id,
     title: dbBook.title,
@@ -101,13 +122,7 @@ function transformBookToBookType(dbBook: BookWithDetails): Book {
     originalPrice: dbBook.original_price ?? undefined,
     discountPercentage: dbBook.discount_percentage ?? undefined,
     description: dbBook.description ?? '',
-    categories: dbBook.book_categories?.map(bc => ({
-      id: bc.categories.id,
-      name: bc.categories.name,
-      slug: bc.categories.slug,
-      icon: '📚',
-      bookCount: 0,
-    })) ?? [],
+    categories: bookCategories,
     rating: dbBook.rating ?? 0,
     publishedDate: new Date(dbBook.created_at),
     isbn: '',
@@ -157,7 +172,7 @@ export async function GET(
     let countQuery = supabase
       .from('books')
       .select('id', { count: 'exact', head: true })
-      .filter('book_categories', 'in', `(${category.id})`)
+      .contains('categories', [category.id])
       .eq('status', 'active');
 
     if (query) {
@@ -187,6 +202,9 @@ export async function GET(
       });
     }
 
+    // Fetch all categories for book transformation
+    const allCategories = await getAllCategories(supabase);
+
     // Build the main query
     let booksQuery = supabase
       .from('books')
@@ -203,10 +221,10 @@ export async function GET(
         language,
         publisher,
         created_at,
-        authors(id, name),
-        book_categories(categories(id, name, slug))
+        categories,
+        authors(id, name)
       `)
-      .filter('book_categories', 'in', `(${category.id})`)
+      .contains('categories', [category.id])
       .eq('status', 'active');
 
     // Apply filters
@@ -277,7 +295,7 @@ export async function GET(
     }
 
     // Transform books to Book type for frontend
-    const transformedBooks = paginatedBooks.map(transformBookToBookType);
+    const transformedBooks = paginatedBooks.map((book) => transformBookToBookType(book, allCategories));
 
     // Build response
     const response: CategoryBooksResponse = {
