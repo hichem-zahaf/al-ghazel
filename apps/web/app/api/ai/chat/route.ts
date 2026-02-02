@@ -1,5 +1,9 @@
 import { NextRequest } from 'next/server';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
+import { ChatOpenAI } from '@langchain/openai';
+import { HumanMessage, SystemMessage, BaseMessage } from '@langchain/core/messages';
+import { DynamicStructuredTool } from '@langchain/core/tools';
+import { z } from 'zod';
 
 // Check if user has credits
 async function checkUserCredits(supabase: any, accountId: string): Promise<{ allowed: boolean; is_admin: boolean; credits_used?: number; credits_limit?: number }> {
@@ -67,6 +71,66 @@ async function semanticSearchBooks(supabase: any, queryEmbedding: number[], limi
   return { books: data || [] };
 }
 
+// Get the LLM instance based on provider configuration
+function getLLMInstance(
+  deploymentType: string,
+  provider: string | null,
+  model: string,
+  apiKey: string | null,
+  temperature: number = 0.7,
+  ollamaUrl?: string | null
+) {
+  const configuration: Record<string, any> = {
+    modelName: model,
+    temperature,
+    streaming: true,
+  };
+
+  // Configure API base URL and key based on provider
+  switch (provider) {
+    case 'openai':
+      configuration.apiKey = apiKey || process.env.NEXT_PUBLIC_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
+      configuration.configuration = {
+        baseURL: 'https://api.openai.com/v1',
+      };
+      break;
+
+    case 'openrouter':
+      configuration.apiKey = apiKey || process.env.OPENROUTER_API_KEY;
+      configuration.configuration = {
+        baseURL: 'https://openrouter.ai/api/v1',
+      };
+      break;
+
+    case 'deepseek':
+      configuration.apiKey = apiKey || process.env.DEEPSEEK_API_KEY;
+      configuration.configuration = {
+        baseURL: 'https://api.deepseek.com/v1',
+      };
+      break;
+
+    case 'zai':
+      configuration.apiKey = apiKey || process.env.ZAI_API_KEY;
+      // Zai might use OpenAI-compatible format - adjust base URL as needed
+      configuration.configuration = {
+        baseURL: process.env.NEXT_ZAI_API_URL || 'https://api.zai.ai/v1',
+      };
+      break;
+
+    case 'ollama':
+      configuration.apiKey = 'ollama'; // Ollama doesn't require a key
+      configuration.configuration = {
+        baseURL: ollamaUrl || process.env.OLLAMA_URL || 'http://localhost:11434/v1',
+      };
+      break;
+
+    default:
+      configuration.apiKey = process.env.OPENAI_API_KEY;
+  }
+
+  return new ChatOpenAI(configuration);
+}
+
 // POST /api/ai/chat - Streaming AI chat
 export async function POST(request: NextRequest) {
   const supabase = getSupabaseServerClient();
@@ -86,7 +150,7 @@ export async function POST(request: NextRequest) {
     const { data: account } = await supabase
       .from('accounts')
       .select('id')
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .single();
 
     if (!account) {
@@ -157,54 +221,98 @@ export async function POST(request: NextRequest) {
     // Use the credit
     await useCredit(supabase, account.id);
 
-    // Create a streaming response
+    // Create the book search tool
+    const searchBooksTool = new DynamicStructuredTool({
+      name: 'search_books',
+      description: 'Search for books in the bookstore catalog. Use this when users ask for book recommendations, want to find books by author, genre, or topic.',
+      schema: z.object({
+        query: z.string().describe('The search query to find books (title, author, genre, topic, etc.)'),
+        limit: z.number().optional().default(5).describe('Maximum number of books to return (default: 5)'),
+      }),
+      func: async ({ query, limit = 5 }) => {
+        const results = await searchBooks(supabase, query, limit, 0);
+        return JSON.stringify({
+          books: results.books.map((book: any) => ({
+            id: book.id,
+            title: book.title,
+            subtitle: book.subtitle,
+            description: book.description,
+            price: book.price,
+            cover_image_url: book.cover_image_url,
+            authors: book.authors,
+            categories: book.categories,
+          }))
+        });
+      },
+    });
+
+    // Get LLM instance
+    const llm = getLLMInstance(
+      aiConfig.deployment_type,
+      aiConfig.deployment_type === 'cloud' ? aiConfig.cloud_provider : aiConfig.local_provider,
+      completionModel || 'gpt-4o-mini',
+      aiConfig.api_key,
+      aiConfig.temperature ?? 0.7,
+      aiConfig.ollama_url // Pass configured Ollama URL for local deployment
+    );
+
+    // Create system prompt
+    const systemPrompt = aiConfig.system_prompt || 'You are a helpful AI assistant for a bookstore. Provide personalized book recommendations and help users discover their next great read.';
+
+    // Create messages
+    const messages: BaseMessage[] = [
+      new SystemMessage(systemPrompt),
+      new HumanMessage(message),
+    ];
+
+    // Bind tools to LLM
+    const llmWithTools = llm.bindTools([searchBooksTool]);
+
+    // Create streaming response
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          // TODO: Implement actual LangChain streaming here
-          // For now, we'll simulate a response
+          let accumulatedContent = '';
+          let toolResults: any = null;
+          let hasCalledTool = false;
 
-          const sendChunk = (chunk: string) => {
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content: chunk })}\n\n`));
-          };
+          // Stream the response
+          const streamResult = await llmWithTools.stream(messages);
 
-          // Simulate AI thinking and typing
-          await new Promise(resolve => setTimeout(resolve, 500));
-          sendChunk("I'd be happy to help you find books! ");
-          await new Promise(resolve => setTimeout(resolve, 200));
-          sendChunk("Let me search our database for recommendations. ");
-          await new Promise(resolve => setTimeout(resolve, 300));
+          for await (const chunk of streamResult) {
+            // Check if this is a tool call
+            if (chunk.tool_calls && chunk.tool_calls.length > 0) {
+              hasCalledTool = true;
+              for (const toolCall of chunk.tool_calls) {
+                if (toolCall.name === 'search_books') {
+                  try {
+                    // toolCall.args can be a string or object
+                    const args = typeof toolCall.args === 'string'
+                      ? JSON.parse(toolCall.args)
+                      : toolCall.args;
+                    const result = await searchBooksTool.func(args);
+                    toolResults = JSON.parse(result);
 
-          // Search for books based on the message
-          const searchResults = await searchBooks(supabase, message, 5, 0);
-
-          if (searchResults.books.length > 0) {
-            sendChunk(`I found ${searchResults.books.length} books that might interest you! `);
-
-            // Format book data for the client tool
-            const booksData = searchResults.books.map((book: any) => ({
-              id: book.id,
-              title: book.title,
-              subtitle: book.subtitle,
-              description: book.description,
-              price: book.price,
-              cover_image_url: book.cover_image_url,
-              authors: book.authors,
-              categories: book.categories,
-            }));
-
-            // Send tool call to display books
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify({
-              toolCall: {
-                name: 'display_books',
-                args: { books: booksData }
+                    // Send tool call to client
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+                      toolCall: {
+                        name: 'display_books',
+                        args: { books: toolResults.books }
+                      }
+                    })}\n\n`));
+                  } catch (error) {
+                    console.error('Tool execution error:', error);
+                  }
+                }
               }
-            })}\n\n`));
+            } else if (chunk.content) {
+              const content = typeof chunk.content === 'string' ? chunk.content : '';
+              accumulatedContent += content;
 
-            sendChunk(`Here are some recommendations based on "${message}". Feel free to ask me more about any of these books or search for something else!`);
-          } else {
-            sendChunk("I couldn't find any books matching that description. Try searching with different keywords or ask me about a specific genre or author!");
+              // Send content chunk to client
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content })}\n\n`));
+            }
           }
 
           // Send done signal
@@ -212,10 +320,12 @@ export async function POST(request: NextRequest) {
 
           // Save to chat history
           const adminSupabase = getSupabaseServerClient();
+          const session = sessionId || crypto.randomUUID();
+
           await adminSupabase.from('ai_chat_history').insert([
             {
               account_id: account.id,
-              session_id: sessionId || crypto.randomUUID(),
+              session_id: session,
               role: 'user',
               content: message,
               metadata: {
@@ -225,13 +335,14 @@ export async function POST(request: NextRequest) {
             },
             {
               account_id: account.id,
-              session_id: sessionId || crypto.randomUUID(),
+              session_id: session,
               role: 'assistant',
-              content: `AI response for: ${message}`,
-              recommended_books: searchResults.books || [],
+              content: accumulatedContent || `AI response for: ${message}`,
+              recommended_books: toolResults?.books || [],
               metadata: {
                 provider: aiConfig.deployment_type === 'cloud' ? aiConfig.cloud_provider : aiConfig.local_provider,
                 model: completionModel,
+                tool_called: hasCalledTool,
               },
             },
           ]);
@@ -239,6 +350,13 @@ export async function POST(request: NextRequest) {
           controller.close();
         } catch (error) {
           console.error('Streaming error:', error);
+
+          // Send error message to client
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+            error: 'Failed to process chat message. Please try again.',
+            done: true
+          })}\n\n`));
+
           controller.error(error);
         }
       },
@@ -278,7 +396,7 @@ export async function GET(request: NextRequest) {
     const { data: account } = await supabase
       .from('accounts')
       .select('id')
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .single();
 
     if (!account) {
