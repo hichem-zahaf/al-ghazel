@@ -41,15 +41,20 @@ function generateBookEmbeddingText(book: any): string {
 }
 
 // Call OpenAI embedding API
-async function generateEmbedding(text: string, apiKey: string): Promise<number[]> {
-  const response = await fetch('https://api.openai.com/v1/embeddings', {
+async function generateEmbedding(
+  text: string,
+  apiKey: string,
+  model = 'text-embedding-3-small',
+  apiUrl = 'https://api.openai.com/v1/embeddings'
+): Promise<number[]> {
+  const response = await fetch(apiUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: 'text-embedding-3-small',
+      model,
       input: text,
       dimensions: 1536,
     }),
@@ -57,7 +62,7 @@ async function generateEmbedding(text: string, apiKey: string): Promise<number[]
 
   if (!response.ok) {
     const error = await response.text();
-    throw new Error(`OpenAI API error: ${error}`);
+    throw new Error(`Embedding API error: ${error}`);
   }
 
   const data = await response.json();
@@ -116,10 +121,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { limit = 50, force = false } = body;
 
-    // Get AI config for API key
+    // Get AI config for API key and model
     const { data: aiConfig } = await adminSupabase
       .from('ai_config')
-      .select('api_key, enable_rag')
+      .select('*')
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -132,8 +137,52 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'RAG is disabled in AI configuration' }, { status: 400 });
     }
 
-    if (!aiConfig.api_key) {
-      return NextResponse.json({ error: 'OpenAI API key not configured' }, { status: 400 });
+    // Determine embedding model and API based on provider
+    let embeddingModel = 'text-embedding-3-small';
+    let embeddingApiKey = aiConfig.api_key;
+    let embeddingApiUrl = 'https://api.openai.com/v1/embeddings';
+
+    const config = aiConfig.config as { providers?: Record<string, { completion_model?: string; embedding_model?: string }> } || {};
+
+    if (aiConfig.deployment_type === 'cloud' && aiConfig.cloud_provider) {
+      const providerConfig = config.providers?.[aiConfig.cloud_provider];
+
+      switch (aiConfig.cloud_provider) {
+        case 'openai':
+          embeddingModel = providerConfig?.embedding_model || 'text-embedding-3-small';
+          embeddingApiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY || embeddingApiKey;
+          embeddingApiUrl = 'https://api.openai.com/v1/embeddings';
+          break;
+
+        case 'openrouter':
+          // OpenRouter uses OpenAI embeddings by default
+          embeddingModel = providerConfig?.embedding_model || 'text-embedding-3-small';
+          embeddingApiKey = process.env.NEXT_OPENROUTER_API_KEY || embeddingApiKey;
+          embeddingApiUrl = 'https://openrouter.ai/api/v1/embeddings';
+          break;
+
+        case 'deepseek':
+        case 'zai':
+          // DeepSeek and Zai always use OpenAI embeddings as fallback
+          embeddingModel = 'text-embedding-3-small';
+          embeddingApiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY || null;
+          embeddingApiUrl = 'https://api.openai.com/v1/embeddings';
+          break;
+
+        default:
+          embeddingModel = 'text-embedding-3-small';
+          embeddingApiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY || embeddingApiKey;
+          embeddingApiUrl = 'https://api.openai.com/v1/embeddings';
+      }
+    } else if (aiConfig.deployment_type === 'local' && aiConfig.local_provider === 'ollama') {
+      // For Ollama, use the selected model
+      embeddingModel = aiConfig.ollama_model || 'llama3.2';
+      embeddingApiKey = ''; // Ollama doesn't need API key
+      embeddingApiUrl = `${aiConfig.ollama_url || 'http://localhost:11434'}/api/embeddings`;
+    }
+
+    if (!embeddingApiKey && aiConfig.deployment_type !== 'local') {
+      return NextResponse.json({ error: 'Embedding API key not configured' }, { status: 400 });
     }
 
     // Get books that need embedding (with author relation)
@@ -199,7 +248,7 @@ export async function POST(request: NextRequest) {
         const embeddingText = generateBookEmbeddingText(bookWithRelations);
 
         // Generate embedding
-        const embedding = await generateEmbedding(embeddingText, aiConfig.api_key);
+        const embedding = await generateEmbedding(embeddingText, embeddingApiKey!, embeddingModel, embeddingApiUrl);
 
         // Upsert embedding
         const { error: upsertError } = await adminSupabase
@@ -208,11 +257,12 @@ export async function POST(request: NextRequest) {
             book_id: book.id,
             embedding: `[${embedding.join(',')}]`,
             embedding_text: embeddingText,
-            embedding_model: 'text-embedding-3-small',
+            embedding_model: embeddingModel,
             metadata: {
               title: book.title,
               author: book.author?.name,
               category_count: bookWithRelations.categories.length,
+              provider: aiConfig.deployment_type === 'cloud' ? aiConfig.cloud_provider : aiConfig.local_provider,
             },
           }, {
             onConflict: 'book_id',

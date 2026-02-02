@@ -5,7 +5,7 @@ type Json = string | number | boolean | null | { [key: string]: Json | undefined
 
 type AIConfigUpdate = {
   deployment_type?: 'cloud' | 'local';
-  cloud_provider?: 'deepseek' | 'openai' | 'zai' | null;
+  cloud_provider?: 'deepseek' | 'openai' | 'zai' | 'openrouter' | null;
   local_provider?: 'ollama' | null;
   ollama_url?: string | null;
   ollama_model?: string | null;
@@ -132,9 +132,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate cloud_provider
-    if (cloud_provider && !['deepseek', 'openai', 'zai'].includes(cloud_provider)) {
+    if (cloud_provider && !['deepseek', 'openai', 'zai', 'openrouter'].includes(cloud_provider)) {
       return NextResponse.json(
-        { error: 'Invalid cloud_provider. Must be "deepseek", "openai", or "zai".' },
+        { error: 'Invalid cloud_provider. Must be "deepseek", "openai", "zai", or "openrouter".' },
         { status: 400 }
       );
     }

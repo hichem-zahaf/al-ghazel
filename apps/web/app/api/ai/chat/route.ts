@@ -142,6 +142,18 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Get the completion model for the current provider
+    let completionModel = aiConfig.model;
+    const config = aiConfig.config as { providers?: Record<string, { completion_model?: string; embedding_model?: string }> } || {};
+    if (aiConfig.deployment_type === 'cloud' && aiConfig.cloud_provider) {
+      const providerConfig = config.providers?.[aiConfig.cloud_provider];
+      if (providerConfig?.completion_model) {
+        completionModel = providerConfig.completion_model;
+      }
+    } else if (aiConfig.deployment_type === 'local' && aiConfig.ollama_model) {
+      completionModel = aiConfig.ollama_model;
+    }
+
     // Use the credit
     await useCredit(supabase, account.id);
 
@@ -206,6 +218,10 @@ export async function POST(request: NextRequest) {
               session_id: sessionId || crypto.randomUUID(),
               role: 'user',
               content: message,
+              metadata: {
+                provider: aiConfig.deployment_type === 'cloud' ? aiConfig.cloud_provider : aiConfig.local_provider,
+                model: completionModel,
+              },
             },
             {
               account_id: account.id,
@@ -213,6 +229,10 @@ export async function POST(request: NextRequest) {
               role: 'assistant',
               content: `AI response for: ${message}`,
               recommended_books: searchResults.books || [],
+              metadata: {
+                provider: aiConfig.deployment_type === 'cloud' ? aiConfig.cloud_provider : aiConfig.local_provider,
+                model: completionModel,
+              },
             },
           ]);
 

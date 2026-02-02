@@ -142,9 +142,22 @@ interface Category {
   display_order: number | null;
 }
 
+interface ProviderModelsConfig {
+  completion_model: string;
+  embedding_model: string | null;
+}
+
+interface AIConfigProviders {
+  openai?: ProviderModelsConfig;
+  openrouter?: ProviderModelsConfig;
+  deepseek?: ProviderModelsConfig;
+  zai?: ProviderModelsConfig;
+  ollama?: ProviderModelsConfig;
+}
+
 interface AIConfig {
   deployment_type: 'cloud' | 'local';
-  cloud_provider: 'deepseek' | 'openai' | 'zai' | null;
+  cloud_provider: 'deepseek' | 'openai' | 'zai' | 'openrouter' | null;
   local_provider: 'ollama' | null;
   ollama_url: string | null;
   ollama_model: string | null;
@@ -157,7 +170,10 @@ interface AIConfig {
   enable_user_access: boolean | null;
   user_credits_limit: number | null;
   system_prompt: string | null;
-  config: Record<string, unknown>;
+  config: {
+    maxTokens?: number;
+    providers?: AIConfigProviders;
+  } & Record<string, unknown>;
 }
 
 // Coupon form state
@@ -1017,6 +1033,14 @@ function AdminSettingsPage() {
     message: '',
   });
 
+  // Provider models state
+  const [providerModels, setProviderModels] = useState<{
+    completion: string[];
+    embedding: string[];
+  }>({ completion: [], embedding: [] });
+  const [isLoadingProviderModels, setIsLoadingProviderModels] = useState(false);
+  const [providerModelsError, setProviderModelsError] = useState<string | null>(null);
+
   // Fetch homepage configuration
   const fetchHomepageConfig = useCallback(async () => {
     try {
@@ -1139,6 +1163,52 @@ function AdminSettingsPage() {
       setIsLoadingOllamaModels(false);
     }
   }, []);
+
+  // Fetch provider models
+  const fetchProviderModels = useCallback(async (provider: string) => {
+    if (!provider || provider === 'ollama') return;
+
+    setIsLoadingProviderModels(true);
+    setProviderModelsError(null);
+    try {
+      const response = await fetch(`/api/ai-config/providers/${provider}/models`);
+      const result = await response.json();
+
+      if (response.ok) {
+        setProviderModels({
+          completion: result.completion || [],
+          embedding: result.embedding || [],
+        });
+
+        // Set default models if not already set
+        const providers = aiConfig.config?.providers || {};
+        const providerConfig = providers[provider as keyof typeof providers] as ProviderModelsConfig | undefined;
+
+        if (!providerConfig?.completion_model && result.completion && result.completion.length > 0) {
+          setAiConfig((prev) => ({
+            ...prev,
+            config: {
+              ...prev.config,
+              providers: {
+                ...prev.config?.providers,
+                [provider]: {
+                  ...providerConfig,
+                  completion_model: result.completion[0],
+                  embedding_model: result.embedding?.[0] || null,
+                },
+              },
+            },
+          }));
+        }
+      } else {
+        setProviderModelsError(result.error || 'Failed to fetch models');
+      }
+    } catch (error) {
+      setProviderModelsError(error instanceof Error ? error.message : 'Failed to fetch models');
+    } finally {
+      setIsLoadingProviderModels(false);
+    }
+  }, [aiConfig.config?.providers]);
 
   // Save AI configuration
   const saveAIConfig = async () => {
@@ -1326,6 +1396,13 @@ function AdminSettingsPage() {
     }, 300);
     return () => clearTimeout(timeoutId);
   }, [aiConfig, originalAiConfig]);
+
+  // Fetch provider models when cloud provider changes
+  useEffect(() => {
+    if (aiConfig.deployment_type === 'cloud' && aiConfig.cloud_provider) {
+      fetchProviderModels(aiConfig.cloud_provider);
+    }
+  }, [aiConfig.cloud_provider, aiConfig.deployment_type]);
 
   // Check for unsaved changes
   useEffect(() => {
@@ -1626,9 +1703,10 @@ function AdminSettingsPage() {
                         <Label htmlFor="cloud-provider">Cloud Provider</Label>
                         <Select
                           value={aiConfig.cloud_provider || 'openai'}
-                          onValueChange={(value: 'deepseek' | 'openai' | 'zai') =>
-                            setAiConfig((prev) => ({ ...prev, cloud_provider: value }))
-                          }
+                          onValueChange={(value: 'deepseek' | 'openai' | 'zai' | 'openrouter') => {
+                            setAiConfig((prev) => ({ ...prev, cloud_provider: value }));
+                            fetchProviderModels(value);
+                          }}
                         >
                           <SelectTrigger id="cloud-provider">
                             <SelectValue />
@@ -1637,6 +1715,7 @@ function AdminSettingsPage() {
                             <SelectItem value="openai">OpenAI</SelectItem>
                             <SelectItem value="deepseek">DeepSeek</SelectItem>
                             <SelectItem value="zai">Zai</SelectItem>
+                            <SelectItem value="openrouter">OpenRouter</SelectItem>
                           </SelectContent>
                         </Select>
                         <p className="text-xs text-muted-foreground">
@@ -1715,19 +1794,164 @@ function AdminSettingsPage() {
                   </CardHeader>
                   <CardContent className="space-y-6">
                     {/* Model Selection for Cloud Providers */}
-                    {aiConfig.deployment_type === 'cloud' && (
-                      <div className="space-y-2">
-                        <Label htmlFor="cloud-model">Model</Label>
-                        <Input
-                          id="cloud-model"
-                          placeholder="gpt-4o-mini"
-                          value={aiConfig.model || ''}
-                          onChange={(e) => setAiConfig((prev) => ({ ...prev, model: e.target.value }))}
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Enter the model name for your selected provider (e.g., gpt-4o-mini, gpt-4o, deepseek-chat)
-                        </p>
-                      </div>
+                    {aiConfig.deployment_type === 'cloud' && aiConfig.cloud_provider && (
+                      <>
+                        {/* Completion Model */}
+                        <div className="space-y-2">
+                          <Label htmlFor="completion-model">Completion Model</Label>
+                          {aiConfig.cloud_provider === 'openrouter' ? (
+                            <>
+                              <Input
+                                id="completion-model"
+                                placeholder="e.g., anthropic/claude-3.5-sonnet, google/gemini-2.0-flash-exp"
+                                value={
+                                  aiConfig.config?.providers?.[aiConfig.cloud_provider]?.completion_model ||
+                                  ''
+                                }
+                                onChange={(e) =>
+                                  setAiConfig((prev) => ({
+                                    ...prev,
+                                    config: {
+                                      ...prev.config,
+                                      providers: {
+                                        ...prev.config?.providers,
+                                        [aiConfig.cloud_provider!]: {
+                                          ...(prev.config?.providers?.[aiConfig.cloud_provider!] as ProviderModelsConfig),
+                                          completion_model: e.target.value,
+                                        },
+                                      },
+                                    },
+                                  }))
+                                }
+                              />
+                              <p className="text-xs text-muted-foreground">
+                                Enter any OpenRouter model ID. See <a href="https://openrouter.ai/models" target="_blank" rel="noopener noreferrer" className="text-primary underline">openrouter.ai/models</a> for available models.
+                              </p>
+                            </>
+                          ) : isLoadingProviderModels ? (
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              Loading models...
+                            </div>
+                          ) : providerModels.completion.length > 0 ? (
+                            <Select
+                              value={
+                                aiConfig.config?.providers?.[aiConfig.cloud_provider]?.completion_model ||
+                                providerModels.completion[0]
+                              }
+                              onValueChange={(value) =>
+                                setAiConfig((prev) => ({
+                                  ...prev,
+                                  config: {
+                                    ...prev.config,
+                                    providers: {
+                                      ...prev.config?.providers,
+                                      [aiConfig.cloud_provider!]: {
+                                        ...(prev.config?.providers?.[aiConfig.cloud_provider!] as ProviderModelsConfig),
+                                        completion_model: value,
+                                      },
+                                    },
+                                  },
+                                }))
+                              }
+                            >
+                              <SelectTrigger id="completion-model">
+                                <SelectValue placeholder="Select a completion model" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {providerModels.completion.map((model) => (
+                                  <SelectItem key={model} value={model}>
+                                    {model}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <Input
+                              id="completion-model"
+                              placeholder="gpt-4o-mini"
+                              value={
+                                aiConfig.config?.providers?.[aiConfig.cloud_provider]?.completion_model ||
+                                aiConfig.model ||
+                                ''
+                              }
+                              onChange={(e) =>
+                                setAiConfig((prev) => ({
+                                  ...prev,
+                                  config: {
+                                    ...prev.config,
+                                    providers: {
+                                      ...prev.config?.providers,
+                                      [aiConfig.cloud_provider!]: {
+                                        ...(prev.config?.providers?.[aiConfig.cloud_provider!] as ProviderModelsConfig),
+                                        completion_model: e.target.value,
+                                      },
+                                    },
+                                  },
+                                }))
+                              }
+                            />
+                          )}
+                          {aiConfig.cloud_provider !== 'openrouter' && (
+                            <p className="text-xs text-muted-foreground">
+                              Model for chat completions and recommendations
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Embedding Model */}
+                        <div className="space-y-2">
+                          <Label htmlFor="embedding-model">Embedding Model</Label>
+                          {isLoadingProviderModels ? (
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              Loading models...
+                            </div>
+                          ) : providerModels.embedding.length > 0 ? (
+                            <Select
+                              value={
+                                aiConfig.config?.providers?.[aiConfig.cloud_provider]?.embedding_model || 'none'
+                              }
+                              onValueChange={(value) =>
+                                setAiConfig((prev) => ({
+                                  ...prev,
+                                  config: {
+                                    ...prev.config,
+                                    providers: {
+                                      ...prev.config?.providers,
+                                      [aiConfig.cloud_provider!]: {
+                                        ...(prev.config?.providers?.[aiConfig.cloud_provider!] as ProviderModelsConfig),
+                                        embedding_model: value === 'none' ? null : value,
+                                      },
+                                    },
+                                  },
+                                }))
+                              }
+                            >
+                              <SelectTrigger id="embedding-model">
+                                <SelectValue placeholder="Select an embedding model (optional)" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">None (use default)</SelectItem>
+                                {providerModels.embedding.map((model) => (
+                                  <SelectItem key={model} value={model}>
+                                    {model}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">
+                              {aiConfig.cloud_provider === 'deepseek' || aiConfig.cloud_provider === 'zai'
+                                ? 'This provider uses OpenAI embeddings by default.'
+                                : 'No embedding models available for this provider.'}
+                            </p>
+                          )}
+                          <p className="text-xs text-muted-foreground">
+                            Model for vector embeddings (optional, defaults to provider default)
+                          </p>
+                        </div>
+                      </>
                     )}
 
                     {/* Temperature Slider */}
