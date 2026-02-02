@@ -5,13 +5,15 @@
 
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { MessageSquare, X, Send, Sparkles } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { MessageSquare, X, Send, Sparkles, ShoppingCart, Loader2 } from 'lucide-react';
 import { cn } from '@kit/ui/utils';
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { BookCard } from './book-card';
 import { BookSwiper } from './book-swiper';
+import { useUser } from '@kit/supabase/hooks/use-user';
+import { toast } from 'sonner';
 import type { Book } from '../../../../types/bookstore';
 
 interface ChatMessage {
@@ -28,30 +30,83 @@ interface AiChatModalProps {
   onClose: () => void;
 }
 
+interface CreditsInfo {
+  credits_used: number;
+  credits_limit: number;
+  is_admin: boolean;
+  remaining: number | 'unlimited';
+}
+
+interface StreamingResponse {
+  content?: string;
+  toolCall?: { name: string; args: { books: Book[] } };
+  done?: boolean;
+}
+
 export function AiChatModal({
   books,
   isOpen,
   onClose
 }: AiChatModalProps) {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: '1',
-      role: 'assistant',
-      content: "Hello! I'm your AI book assistant. I can help you discover new books based on your preferences. What kind of books are you looking for?",
-      timestamp: new Date(),
-    }
-  ]);
+  const { data: user } = useUser();
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [aiCredits, setAiCredits] = useState({ used: 12, total: 100 });
+  const [credits, setCredits] = useState<CreditsInfo | null>(null);
+  const [isLoadingCredits, setIsLoadingCredits] = useState(true);
+  const [currentStreamingMessage, setCurrentStreamingMessage] = useState('');
+  const [streamingBooks, setStreamingBooks] = useState<Book[]>([]);
+  const [showBooks, setShowBooks] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Fetch credits on mount and when user changes
+  const fetchCredits = useCallback(async () => {
+    if (!user) {
+      setCredits(null);
+      setIsLoadingCredits(false);
+      return;
+    }
+
+    setIsLoadingCredits(true);
+    try {
+      const response = await fetch('/api/ai/chat');
+      if (response.ok) {
+        const data = await response.json();
+        setCredits(data);
+      } else {
+        setCredits(null);
+      }
+    } catch (error) {
+      console.error('Failed to fetch credits:', error);
+      setCredits(null);
+    } finally {
+      setIsLoadingCredits(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    fetchCredits();
+  }, [fetchCredits]);
+
+  // Initialize with welcome message
+  useEffect(() => {
+    if (isOpen && messages.length === 0) {
+      setMessages([{
+        id: '1',
+        role: 'assistant',
+        content: "Hello! I'm your AI book assistant. I can help you discover new books based on your preferences. What kind of books are you looking for?",
+        timestamp: new Date(),
+      }]);
+    }
+  }, [isOpen, messages.length]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, currentStreamingMessage]);
 
   // Focus input when opened
   useEffect(() => {
@@ -66,6 +121,13 @@ export function AiChatModal({
       document.body.style.overflow = '';
     };
   }, [isOpen]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+    };
+  }, []);
 
   // Handle backdrop click
   useEffect(() => {
@@ -82,7 +144,19 @@ export function AiChatModal({
   }, [isOpen, onClose]);
 
   const handleSendMessage = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() || isTyping) return;
+
+    // Check if user is logged in
+    if (!user) {
+      toast.error('Please login to use AI chat');
+      return;
+    }
+
+    // Check credits
+    if (credits && credits.remaining === 0 && !credits.is_admin) {
+      toast.error('You have used all your AI credits for today');
+      return;
+    }
 
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
@@ -94,28 +168,112 @@ export function AiChatModal({
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
     setIsTyping(true);
+    setCurrentStreamingMessage('');
+    setStreamingBooks([]);
 
-    // Simulate AI response
-    setTimeout(() => {
-      const recommendedBooks = books
-        .sort(() => Math.random() - 0.5)
-        .slice(0, Math.floor(Math.random() * 4) + 4); // Random 4-7 books
+    // Create new AbortController for this request
+    abortControllerRef.current = new AbortController();
 
-      const aiMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: `Based on your interest in "${userMessage.content}", here are some books I think you'll enjoy!`,
-        timestamp: new Date(),
-        recommendedBooks,
-      };
+    try {
+      const response = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: userMessage.content,
+          sessionId: crypto.randomUUID(),
+        }),
+        signal: abortControllerRef.current.signal,
+      });
 
-      setMessages((prev) => [...prev, aiMessage]);
+      if (!response.ok) {
+        const errorData = await response.json();
+        if (response.status === 429) {
+          toast.error(`Insufficient credits. Used ${errorData.credits_used}/${errorData.credits_limit}`);
+        } else {
+          toast.error(errorData.error || 'Failed to send message');
+        }
+        setIsTyping(false);
+        return;
+      }
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+
+      if (!reader) {
+        throw new Error('No response body');
+      }
+
+      let buffer = '';
+      let accumulatedContent = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data: StreamingResponse = JSON.parse(line.slice(6));
+
+              if (data.content) {
+                accumulatedContent += data.content;
+                setCurrentStreamingMessage(accumulatedContent);
+              }
+
+              if (data.toolCall?.name === 'display_books' && data.toolCall.args.books) {
+                setStreamingBooks(data.toolCall.args.books);
+              }
+
+              if (data.done) {
+                const aiMessage: ChatMessage = {
+                  id: (Date.now() + 1).toString(),
+                  role: 'assistant',
+                  content: accumulatedContent,
+                  timestamp: new Date(),
+                  recommendedBooks: streamingBooks.length > 0 ? streamingBooks : undefined,
+                };
+                setMessages((prev) => [...prev, aiMessage]);
+                setCurrentStreamingMessage('');
+                setStreamingBooks([]);
+
+                // Refresh credits after message
+                fetchCredits();
+              }
+            } catch (e) {
+              console.error('Failed to parse SSE data:', e);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      if ((error as Error).name !== 'AbortError') {
+        console.error('Chat error:', error);
+        toast.error('Failed to send message');
+      }
+    } finally {
       setIsTyping(false);
-      setAiCredits((prev) => ({ ...prev, used: Math.min(prev.used + 1, prev.total) }));
-    }, 1500);
+      abortControllerRef.current = null;
+    }
   };
 
-  const creditsPercentage = (aiCredits.used / aiCredits.total) * 100;
+  // Format remaining credits
+  const formatCredits = () => {
+    if (isLoadingCredits) return 'Loading...';
+    if (!credits) return 'Login required';
+    if (credits.is_admin) return 'Unlimited (Admin)';
+    if (credits.remaining === 'unlimited') return 'Unlimited';
+    return `${credits.remaining} remaining`;
+  };
+
+  // Calculate credit percentage for meter
+  const creditPercentage = credits && credits.credits_limit > 0
+    ? ((credits.credits_limit - credits.credits_used) / credits.credits_limit) * 100
+    : 100;
 
   if (!isOpen) return null;
 
@@ -158,12 +316,19 @@ export function AiChatModal({
           <div className="flex items-center gap-3">
             <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-orange to-orange/70 transition-all duration-500 ease-out"
-                style={{ width: `${creditsPercentage}%` }}
+                className={cn(
+                  "h-full transition-all duration-500 ease-out",
+                  creditPercentage < 20
+                    ? "bg-red-500"
+                    : creditPercentage < 50
+                    ? "bg-yellow-500"
+                    : "bg-gradient-to-r from-orange to-orange/70"
+                )}
+                style={{ width: `${creditPercentage}%` }}
               />
             </div>
             <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">
-              {aiCredits.used} / {aiCredits.total} credits
+              {formatCredits()}
             </span>
           </div>
         </div>
@@ -191,7 +356,7 @@ export function AiChatModal({
                     : 'bg-beige dark:bg-gray-800 text-black dark:text-white'
                 )}
               >
-                <p className="text-sm">{message.content}</p>
+                <p className="text-sm whitespace-pre-wrap">{message.content}</p>
                 <span className="text-[10px] opacity-70 mt-1 block">
                   {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
@@ -204,8 +369,25 @@ export function AiChatModal({
             </div>
           ))}
 
+          {/* Streaming message */}
+          {isTyping && currentStreamingMessage && (
+            <div className="flex gap-3 justify-start">
+              <div className="w-8 h-8 rounded-full bg-orange/10 flex items-center justify-center flex-shrink-0">
+                <Sparkles className="w-4 h-4 text-orange" />
+              </div>
+              <div className="max-w-[70%] rounded-2xl px-4 py-2 bg-beige dark:bg-gray-800 text-black dark:text-white">
+                <p className="text-sm whitespace-pre-wrap">{currentStreamingMessage}</p>
+                <span className="inline-flex gap-1 mt-2">
+                  <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Typing indicator */}
-          {isTyping && (
+          {isTyping && !currentStreamingMessage && (
             <div className="flex gap-3 justify-start">
               <div className="w-8 h-8 rounded-full bg-orange/10 flex items-center justify-center flex-shrink-0">
                 <Sparkles className="w-4 h-4 text-orange" />
@@ -220,7 +402,40 @@ export function AiChatModal({
             </div>
           )}
 
-          {/* Recommended Books Section */}
+          {/* Streaming Books */}
+          {isTyping && streamingBooks.length > 0 && (
+            <div className="border-t border-border/50 pt-4">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <ShoppingCart className="w-4 h-4" />
+                  Recommended Books ({streamingBooks.length})
+                </p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowBooks(!showBooks)}
+                  className="text-xs"
+                >
+                  {showBooks ? 'Hide' : 'Show'}
+                </Button>
+              </div>
+              {showBooks && (
+                <BookSwiper>
+                  {streamingBooks.map((book) => (
+                    <div key={book.id} className="flex-shrink-0 w-48 snap-start">
+                      <BookCard
+                        book={book}
+                        variant="compact"
+                        className="w-full"
+                      />
+                    </div>
+                  ))}
+                </BookSwiper>
+              )}
+            </div>
+          )}
+
+          {/* Recommended Books Section from completed messages */}
           {messages
             .filter((m) => m.role === 'assistant' && m.recommendedBooks && m.recommendedBooks.length > 0)
             .map((message) => (
@@ -251,7 +466,7 @@ export function AiChatModal({
             <Input
               ref={inputRef}
               type="text"
-              placeholder="Ask for book recommendations..."
+              placeholder={user ? "Ask for book recommendations..." : "Login to chat..."}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
@@ -260,14 +475,19 @@ export function AiChatModal({
                   handleSendMessage();
                 }
               }}
+              disabled={!user || isTyping}
               className="flex-1"
             />
             <Button
               onClick={handleSendMessage}
-              disabled={!input.trim() || isTyping}
+              disabled={!input.trim() || isTyping || !user}
               className="bg-orange hover:bg-orange/90"
             >
-              <Send className="w-4 h-4" />
+              {isTyping ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
             </Button>
           </div>
         </div>

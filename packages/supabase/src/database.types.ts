@@ -41,6 +41,7 @@ export type Database = {
           created_by: string | null
           email: string | null
           id: string
+          is_admin: boolean | null
           name: string
           picture_url: string | null
           public_data: Json
@@ -53,6 +54,7 @@ export type Database = {
           created_by?: string | null
           email?: string | null
           id?: string
+          is_admin?: boolean | null
           name: string
           picture_url?: string | null
           public_data?: Json
@@ -65,6 +67,7 @@ export type Database = {
           created_by?: string | null
           email?: string | null
           id?: string
+          is_admin?: boolean | null
           name?: string
           picture_url?: string | null
           public_data?: Json
@@ -73,6 +76,47 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_chat_history: {
+        Row: {
+          account_id: string | null
+          content: string
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          recommended_books: Json | null
+          role: string
+          session_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          content: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          recommended_books?: Json | null
+          role: string
+          session_id: string
+        }
+        Update: {
+          account_id?: string | null
+          content?: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          recommended_books?: Json | null
+          role?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_chat_history_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_config: {
         Row: {
           api_key: string | null
@@ -80,13 +124,21 @@ export type Database = {
           config: Json | null
           created_at: string | null
           deployment_type: string
+          enable_book_recommend: boolean | null
+          enable_book_search: boolean | null
+          enable_rag: boolean | null
+          enable_user_access: boolean | null
           id: string
           local_provider: string | null
           model: string | null
           ollama_model: string | null
           ollama_url: string | null
+          system_prompt: string | null
+          temperature: number | null
+          top_p: number | null
           updated_at: string | null
           updated_by: string | null
+          user_credits_limit: number | null
         }
         Insert: {
           api_key?: string | null
@@ -94,13 +146,21 @@ export type Database = {
           config?: Json | null
           created_at?: string | null
           deployment_type?: string
+          enable_book_recommend?: boolean | null
+          enable_book_search?: boolean | null
+          enable_rag?: boolean | null
+          enable_user_access?: boolean | null
           id?: string
           local_provider?: string | null
           model?: string | null
           ollama_model?: string | null
           ollama_url?: string | null
+          system_prompt?: string | null
+          temperature?: number | null
+          top_p?: number | null
           updated_at?: string | null
           updated_by?: string | null
+          user_credits_limit?: number | null
         }
         Update: {
           api_key?: string | null
@@ -108,13 +168,21 @@ export type Database = {
           config?: Json | null
           created_at?: string | null
           deployment_type?: string
+          enable_book_recommend?: boolean | null
+          enable_book_search?: boolean | null
+          enable_rag?: boolean | null
+          enable_user_access?: boolean | null
           id?: string
           local_provider?: string | null
           model?: string | null
           ollama_model?: string | null
           ollama_url?: string | null
+          system_prompt?: string | null
+          temperature?: number | null
+          top_p?: number | null
           updated_at?: string | null
           updated_by?: string | null
+          user_credits_limit?: number | null
         }
         Relationships: [
           {
@@ -250,6 +318,47 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      book_embeddings: {
+        Row: {
+          book_id: string
+          created_at: string | null
+          embedding: string | null
+          embedding_model: string | null
+          embedding_text: string
+          id: string
+          metadata: Json | null
+          updated_at: string | null
+        }
+        Insert: {
+          book_id: string
+          created_at?: string | null
+          embedding?: string | null
+          embedding_model?: string | null
+          embedding_text: string
+          id?: string
+          metadata?: Json | null
+          updated_at?: string | null
+        }
+        Update: {
+          book_id?: string
+          created_at?: string | null
+          embedding?: string | null
+          embedding_model?: string | null
+          embedding_text?: string
+          id?: string
+          metadata?: Json | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "book_embeddings_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: true
+            referencedRelation: "books"
             referencedColumns: ["id"]
           },
         ]
@@ -838,6 +947,44 @@ export type Database = {
         }
         Relationships: []
       }
+      user_ai_credits: {
+        Row: {
+          account_id: string
+          created_at: string | null
+          credits_limit: number
+          credits_used: number
+          id: string
+          last_reset_date: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          account_id: string
+          created_at?: string | null
+          credits_limit: number
+          credits_used?: number
+          id?: string
+          last_reset_date?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          account_id?: string
+          created_at?: string | null
+          credits_limit?: number
+          credits_used?: number
+          id?: string
+          last_reset_date?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_ai_credits_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: true
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_author_preferences: {
         Row: {
           account_id: string
@@ -1110,6 +1257,10 @@ export type Database = {
         }
         Returns: string
       }
+      binary_quantize: {
+        Args: { "": string } | { "": unknown }
+        Returns: unknown
+      }
       decrement_category_counts: {
         Args: { category_ids: string[] }
         Returns: undefined
@@ -1157,6 +1308,14 @@ export type Database = {
           created_at: string
         }[]
       }
+      get_user_ai_credits: {
+        Args: { p_account_id: string }
+        Returns: {
+          credits_limit: number
+          credits_used: number
+          is_admin: boolean
+        }[]
+      }
       gtrgm_compress: {
         Args: { "": unknown }
         Returns: unknown
@@ -1177,6 +1336,38 @@ export type Database = {
         Args: { "": unknown }
         Returns: unknown
       }
+      halfvec_avg: {
+        Args: { "": number[] }
+        Returns: unknown
+      }
+      halfvec_out: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      halfvec_send: {
+        Args: { "": unknown }
+        Returns: string
+      }
+      halfvec_typmod_in: {
+        Args: { "": unknown[] }
+        Returns: number
+      }
+      hnsw_bit_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      hnsw_halfvec_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      hnsw_sparsevec_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      hnswhandler: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
       increment_author_interest: {
         Args: { p_account_id: string; p_amount?: number; p_author_id: string }
         Returns: undefined
@@ -1184,6 +1375,42 @@ export type Database = {
       increment_category_counts: {
         Args: { category_ids: string[] }
         Returns: undefined
+      }
+      ivfflat_bit_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      ivfflat_halfvec_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      ivfflathandler: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      l2_norm: {
+        Args: { "": unknown } | { "": unknown }
+        Returns: number
+      }
+      l2_normalize: {
+        Args: { "": string } | { "": unknown } | { "": unknown }
+        Returns: string
+      }
+      match_books: {
+        Args: {
+          match_count?: number
+          match_threshold?: number
+          query_embedding: string
+        }
+        Returns: {
+          cover_image_url: string
+          description: string
+          id: string
+          price: number
+          similarity: number
+          subtitle: string
+          title: string
+        }[]
       }
       save_checkout_data: {
         Args: {
@@ -1209,9 +1436,49 @@ export type Database = {
         Args: { "": string }
         Returns: string[]
       }
+      sparsevec_out: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      sparsevec_send: {
+        Args: { "": unknown }
+        Returns: string
+      }
+      sparsevec_typmod_in: {
+        Args: { "": unknown[] }
+        Returns: number
+      }
+      use_ai_credits: {
+        Args: { p_account_id: string; p_amount?: number }
+        Returns: boolean
+      }
       validate_coupon: {
         Args: { cart_subtotal: number; coupon_code: string }
         Returns: Json
+      }
+      vector_avg: {
+        Args: { "": number[] }
+        Returns: string
+      }
+      vector_dims: {
+        Args: { "": string } | { "": unknown }
+        Returns: number
+      }
+      vector_norm: {
+        Args: { "": string }
+        Returns: number
+      }
+      vector_out: {
+        Args: { "": string }
+        Returns: unknown
+      }
+      vector_send: {
+        Args: { "": string }
+        Returns: string
+      }
+      vector_typmod_in: {
+        Args: { "": unknown[] }
+        Returns: number
       }
     }
     Enums: {

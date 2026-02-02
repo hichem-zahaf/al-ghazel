@@ -29,6 +29,8 @@ import {
   Check,
   Loader2,
   AlertCircle,
+  RefreshCw,
+  Database,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useDrag, useDrop, DndProvider } from 'react-dnd';
@@ -1873,6 +1875,182 @@ function AdminSettingsPage() {
                         Reset to Defaults
                       </Button>
                     </div>
+                  </CardContent>
+                </Card>
+
+                {/* RAG Embedding Sync Card */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>RAG Book Embeddings</CardTitle>
+                    <CardDescription>Sync and embed books for semantic search</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                      <div>
+                        <p className="text-sm font-medium">Embedding Status</p>
+                        <p className="text-xs text-muted-foreground">
+                          Keep your book embeddings up to date for better AI recommendations
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={async () => {
+                          try {
+                            const response = await fetch('/api/ai/books/embed');
+                            if (response.ok) {
+                              const data = await response.json();
+                              setAiConfigSaveStatus({
+                                type: 'success',
+                                message: `${data.embedded_books || 0}/${data.total_books || 0} books embedded`,
+                              });
+                            }
+                          } catch (error) {
+                            console.error('Failed to fetch embedding status:', error);
+                          }
+                        }}
+                      >
+                        Check Status
+                      </Button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <Button
+                        variant="default"
+                        disabled={isSaving || !aiConfig.enable_rag}
+                        onClick={async () => {
+                          setIsSaving(true);
+                          try {
+                            const response = await fetch('/api/ai/books/embed', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ limit: 50, force: false }),
+                            });
+                            const result = await response.json();
+                            if (response.ok) {
+                              setAiConfigSaveStatus({
+                                type: 'success',
+                                message: result.message || 'Embedding completed',
+                              });
+                            } else {
+                              setAiConfigSaveStatus({ type: 'error', message: result.error || 'Embedding failed' });
+                            }
+                          } catch (error) {
+                            setAiConfigSaveStatus({ type: 'error', message: 'Network error' });
+                          } finally {
+                            setIsSaving(false);
+                          }
+                        }}
+                      >
+                        {isSaving ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Syncing...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="h-4 w-4 mr-2" />
+                            Sync New Books
+                          </>
+                        )}
+                      </Button>
+
+                      <Button
+                        variant="outline"
+                        disabled={isSaving || !aiConfig.enable_rag}
+                        onClick={async () => {
+                          if (!confirm('This will re-embed all books. Continue?')) return;
+                          setIsSaving(true);
+                          try {
+                            const response = await fetch('/api/ai/books/embed', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ limit: 50, force: true }),
+                            });
+                            const result = await response.json();
+                            if (response.ok) {
+                              setAiConfigSaveStatus({
+                                type: 'success',
+                                message: result.message || 'Re-embedding completed',
+                              });
+                            } else {
+                              setAiConfigSaveStatus({ type: 'error', message: result.error || 'Re-embedding failed' });
+                            }
+                          } catch (error) {
+                            setAiConfigSaveStatus({ type: 'error', message: 'Network error' });
+                          } finally {
+                            setIsSaving(false);
+                          }
+                        }}
+                      >
+                        {isSaving ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Re-embedding...
+                          </>
+                        ) : (
+                          <>
+                            <RefreshCw className="h-4 w-4 mr-2" />
+                            Re-embed All
+                          </>
+                        )}
+                      </Button>
+
+                      <Button
+                        variant="outline"
+                        disabled={isSaving}
+                        onClick={async () => {
+                          setIsSaving(true);
+                          try {
+                            const response = await fetch('/api/ai/books/embed', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ limit: 1000, force: false }),
+                            });
+                            const result = await response.json();
+                            if (response.ok) {
+                              setAiConfigSaveStatus({
+                                type: 'success',
+                                message: result.message || 'Full sync completed',
+                              });
+                            } else {
+                              setAiConfigSaveStatus({ type: 'error', message: result.error || 'Sync failed' });
+                            }
+                          } catch (error) {
+                            setAiConfigSaveStatus({ type: 'error', message: 'Network error' });
+                          } finally {
+                            setIsSaving(false);
+                          }
+                        }}
+                      >
+                        {isSaving ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Syncing...
+                          </>
+                        ) : (
+                          <>
+                            <Database className="h-4 w-4 mr-2" />
+                            Full Sync
+                          </>
+                        )}
+                      </Button>
+                    </div>
+
+                    <p className="text-xs text-muted-foreground">
+                      <strong>Tip:</strong> Run "Sync New Books" after adding new books to your catalog.
+                      Use "Re-embed All" when you want to refresh all embeddings.
+                      Full sync processes all books at once (may take longer).
+                    </p>
+
+                    {!aiConfig.enable_rag && (
+                      <div className="flex items-start gap-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                        <AlertCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
+                        <p className="text-xs text-yellow-800 dark:text-yellow-200">
+                          RAG is currently disabled. Enable it in the Feature Toggles above to use semantic search.
+                        </p>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </>
