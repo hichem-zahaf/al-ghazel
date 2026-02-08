@@ -45,6 +45,7 @@ const adminRoutes = [
         path: pathsConfig.admin.users,
         Icon: <Users className={iconClasses} />,
       },
+      
     ],
   },
   {
