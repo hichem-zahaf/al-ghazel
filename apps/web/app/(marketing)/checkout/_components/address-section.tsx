@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from '@kit/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
-import { getAllWilayas, getCitiesByWilaya, getWilayaName } from '~/lib/utils/algeria-data';
+import { getAllWilayas, getCitiesByWilaya } from '~/lib/utils/algeria-data';
 import type { Wilaya, City } from '~/types/bookstore';
 
 interface AddressSectionProps {
@@ -50,14 +50,14 @@ export function AddressSection({
   // Load cities when wilaya changes
   useEffect(() => {
     if (wilayaCode) {
-      setCities(getCitiesByWilaya(wilayaCode));
+      setCities(getCitiesByWilaya(parseInt(wilayaCode, 10)));
     } else {
       setCities([]);
     }
     // Clear city when wilaya changes
     if (wilayaCode && city) {
-      const cityExists = getCitiesByWilaya(wilayaCode).some(
-        (c) => c.commune_name_ascii === city || c.commune_name === city
+      const cityExists = getCitiesByWilaya(parseInt(wilayaCode, 10)).some(
+        (c) => c.commune_name_latin === city || c.commune_name_arabic === city
       );
       if (!cityExists) {
         onCityChange('');
@@ -96,8 +96,8 @@ export function AddressSection({
             </SelectTrigger>
             <SelectContent>
               {wilayas.map((wilaya) => (
-                <SelectItem key={wilaya.wilaya_code} value={wilaya.wilaya_code}>
-                  {wilaya.wilaya_code} - {wilaya.wilaya_name_ascii} ({wilaya.wilaya_name})
+                <SelectItem key={wilaya.wilaya_id} value={String(wilaya.wilaya_id)}>
+                  {wilaya.wilaya_id} - {wilaya.wilaya_name_latin} ({wilaya.wilaya_name_arabic})
                 </SelectItem>
               ))}
             </SelectContent>
@@ -126,13 +126,13 @@ export function AddressSection({
               </SelectTrigger>
               <SelectContent>
                 {cities
-                  .sort((a, b) => a.commune_name_ascii.localeCompare(b.commune_name_ascii))
+                  .sort((a, b) => a.commune_name_latin.localeCompare(b.commune_name_latin))
                   .map((cityItem) => (
                     <SelectItem
-                      key={cityItem.id}
-                      value={cityItem.commune_name_ascii}
+                      key={cityItem.commune_id}
+                      value={cityItem.commune_name_latin}
                     >
-                      {cityItem.commune_name_ascii} ({cityItem.commune_name})
+                      {cityItem.commune_name_latin} ({cityItem.commune_name_arabic})
                     </SelectItem>
                   ))}
               </SelectContent>

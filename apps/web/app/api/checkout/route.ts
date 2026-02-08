@@ -154,10 +154,8 @@ export async function POST(request: NextRequest) {
     const total = subtotal - discountAmount + deliveryCharge;
 
     // Get wilaya name for state field
-    const wilayaData = await import('~/config/json/algeria_wilayas.json', {
-      with: { type: 'json' },
-    }).then(m => m.default);
-    const wilaya = wilayaData.find((w: any) => w.wilaya_code === wilayaCode);
+    const { getWilayaById } = await import('~/lib/utils/algeria-data');
+    const wilaya = getWilayaById(parseInt(wilayaCode, 10));
 
     // Generate order number (format: AG-YYYYMMDD-XXXXX where X is random)
     const date = new Date();
@@ -191,7 +189,7 @@ export async function POST(request: NextRequest) {
         shipping_phone: phone,
         shipping_address_line1: addressLine,
         shipping_city: city,
-        shipping_state: wilaya?.wilaya_name_ascii || wilayaCode,
+        shipping_state: wilaya?.wilaya_name_latin || wilayaCode,
         shipping_country: 'Algeria',
         // Algeria-specific fields
         wilaya_code: wilayaCode,

@@ -135,21 +135,20 @@ export interface CartStore extends CartState {
 // ============================================================================
 
 export interface Wilaya {
-  wilaya_code: string;
-  wilaya_name: string;
-  wilaya_name_ascii: string;
+  wilaya_id: number;
+  wilaya_name_latin: string;
+  wilaya_name_arabic: string;
 }
 
-export interface City {
-  id: number;
-  commune_name: string;
-  commune_name_ascii: string;
-  daira_name: string;
-  daira_name_ascii: string;
-  wilaya_code: string;
-  wilaya_name: string;
-  wilaya_name_ascii: string;
+export interface Commune {
+  commune_id: number;
+  wilaya_id: number;
+  commune_name_arabic: string;
+  commune_name_latin: string;
 }
+
+// Legacy type alias for compatibility
+export type City = Commune;
 
 // ============================================================================
 // Checkout Types
