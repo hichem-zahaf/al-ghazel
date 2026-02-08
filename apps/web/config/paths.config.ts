@@ -19,6 +19,7 @@ const PathsSchema = z.object({
     users: z.string().min(1),
     books: z.string().min(1),
     authors: z.string().min(1),
+    connector: z.string().min(1),
     settings: z.string().min(1),
   }),
 });
@@ -42,6 +43,7 @@ const pathsConfig = PathsSchema.parse({
     users: '/admin/users',
     books: '/admin/books',
     authors: '/admin/authors',
+    connector: '/admin/connector',
     settings: '/admin/settings',
   },
 } satisfies z.infer<typeof PathsSchema>);

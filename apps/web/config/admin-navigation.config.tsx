@@ -11,6 +11,7 @@ import {
   SlidersHorizontal,
   Tags,
   UserCog,
+  Instagram,
 } from 'lucide-react';
 import { z } from 'zod';
 
@@ -60,6 +61,11 @@ const adminRoutes = [
         label: 'Authors',
         path: pathsConfig.admin.authors,
         Icon: <BookMarked className={iconClasses} />,
+      },
+      {
+        label: 'Instagram Connector',
+        path: pathsConfig.admin.connector,
+        Icon: <Instagram className={iconClasses} />,
       },
     ],
   },

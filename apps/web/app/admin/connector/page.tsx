@@ -14,6 +14,9 @@ import {
   Database,
   FileText,
   User,
+  Trash2,
+  Sparkles,
+  Check,
 } from 'lucide-react';
 
 import { PageBody } from '@kit/ui/page';
@@ -22,25 +25,19 @@ import { Button } from '@kit/ui/button';
 import { Badge } from '@kit/ui/badge';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
+import { Textarea } from '@kit/ui/textarea';
 import { Alert, AlertDescription, AlertTitle } from '@kit/ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
+import { Checkbox } from '@kit/ui/checkbox';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@kit/ui/dialog';
 import { cn } from '@kit/ui/utils';
-
-// Debounce hook
-function useDebounce<T>(value: T, delay: number): T {
-  const [debouncedValue, setDebouncedValue] = useState<T>(value);
-
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedValue(value);
-    }, delay);
-
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [value, delay]);
-
-  return debouncedValue;
-}
 
 // Types
 type ValidationStatus = 'idle' | 'valid' | 'invalid';
@@ -63,10 +60,26 @@ interface FetchResult {
   error?: string;
 }
 
+interface PostData {
+  code: string;
+  pk: string;
+  id: string;
+  caption: {
+    text: string;
+  };
+  image: {
+    url: string;
+    width: number;
+    height: number;
+  };
+  author?: string;
+}
+
 // Default API key from environment
 const DEFAULT_API_KEY = process.env.NEXT_PUBLIC_IG_SCRAPER_API || '';
 
-export default function InstagramConnectorPage() {
+// Extract Tab Component
+function ExtractTab() {
   // API Key state
   const [apiKey, setApiKey] = useState(DEFAULT_API_KEY);
   const [showApiKey, setShowApiKey] = useState(false);
@@ -87,7 +100,12 @@ export default function InstagramConnectorPage() {
   const [error, setError] = useState<string | null>(null);
 
   // Debounced username validation
-  const debouncedUsername = useDebounce(username, 500);
+  const [debouncedUsername, setDebouncedUsername] = useState(username);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedUsername(username), 500);
+    return () => clearTimeout(timer);
+  }, [username]);
 
   // Validate username only
   const validateInput = useCallback((value: string): ValidationResult => {
@@ -189,6 +207,595 @@ export default function InstagramConnectorPage() {
   };
 
   return (
+    <div className="grid gap-6 lg:grid-cols-3">
+      {/* Main Form */}
+      <div className="lg:col-span-2 space-y-6">
+        {/* API Key Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">API Configuration</CardTitle>
+            <CardDescription>
+              Enter your RapidAPI key for the IG Scraper service
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="api-key">API Key</Label>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Input
+                    id="api-key"
+                    type={showApiKey ? 'text' : 'password'}
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    placeholder="Enter your RapidAPI key"
+                    className="pr-10"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                    onClick={() => setShowApiKey(!showApiKey)}
+                  >
+                    {showApiKey ? (
+                      <EyeOff className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+              {DEFAULT_API_KEY && !apiKey && (
+                <p className="text-xs text-muted-foreground">
+                  Using default API key from environment
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Fetch Form */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Extract Posts from Instagram Profile</CardTitle>
+            <CardDescription>
+              Enter a username to fetch their posts
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Username Input */}
+            <div className="space-y-2">
+              <Label htmlFor="username">Username</Label>
+              <Input
+                id="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="@username"
+                className={cn(
+                  validation.status === 'invalid' && 'border-destructive focus-visible:ring-destructive',
+                  validation.status === 'valid' && 'border-green-500 focus-visible:ring-green-500'
+                )}
+              />
+              {validation.status !== 'idle' && (
+                <p className={cn(
+                  'text-xs flex items-center gap-1',
+                  validation.status === 'valid' ? 'text-green-600' : 'text-destructive'
+                )}>
+                  {validation.status === 'valid' ? (
+                    <CheckCircle2 className="h-3 w-3" />
+                  ) : (
+                    <AlertCircle className="h-3 w-3" />
+                  )}
+                  {validation.message}
+                </p>
+              )}
+            </div>
+
+            {/* Number of Posts */}
+            <div className="space-y-2">
+              <Label htmlFor="posts-count">Number of Posts to Fetch</Label>
+              <Input
+                id="posts-count"
+                type="number"
+                min="1"
+                max="100"
+                value={numberOfPosts}
+                onChange={(e) => setNumberOfPosts(e.target.value)}
+              />
+            </div>
+
+            {/* Pagination Cursor */}
+            <div className="space-y-2">
+              <Label htmlFor="after-cursor">After Cursor (Pagination)</Label>
+              <Input
+                id="after-cursor"
+                value={afterCursor}
+                onChange={(e) => setAfterCursor(e.target.value)}
+                placeholder="Auto-filled from previous requests"
+              />
+              <p className="text-xs text-muted-foreground">
+                This field is automatically filled when there are more posts to fetch
+              </p>
+            </div>
+
+            {/* Error Alert */}
+            {error && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex gap-2">
+              <Button
+                onClick={handleFetch}
+                disabled={isFetching || validation.status !== 'valid' || !apiKey}
+                className="flex-1"
+              >
+                {isFetching ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Fetching...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4 mr-2" />
+                    Fetch Posts
+                  </>
+                )}
+              </Button>
+              <Button
+                onClick={handleReset}
+                variant="outline"
+                disabled={isFetching}
+              >
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Results Section */}
+        {result && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5 text-green-500" />
+                Fetch Complete
+              </CardTitle>
+              <CardDescription>
+                Successfully extracted {result.extractedPosts} posts
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Stats */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-950/20 rounded-lg">
+                  <FileText className="h-4 w-4 text-green-600" />
+                  <div>
+                    <p className="text-2xl font-bold text-green-600">{result.newPosts.length}</p>
+                    <p className="text-xs text-muted-foreground">New Posts</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+                  <User className="h-4 w-4 text-blue-600" />
+                  <div>
+                    <p className="text-2xl font-bold text-blue-600">{result.updatedProfiles.length}</p>
+                    <p className="text-xs text-muted-foreground">Profiles</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-950/20 rounded-lg">
+                  <Database className="h-4 w-4 text-gray-600" />
+                  <div>
+                    <p className="text-2xl font-bold text-gray-600">{result.skippedPosts.length}</p>
+                    <p className="text-xs text-muted-foreground">Skipped</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 p-3 bg-orange-50 dark:bg-orange-950/20 rounded-lg">
+                  <RefreshCw className="h-4 w-4 text-orange-600" />
+                  <div>
+                    <p className="text-2xl font-bold text-orange-600">{result.requestCount}</p>
+                    <p className="text-xs text-muted-foreground">Requests</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Pagination Info */}
+              {result.hasNextPage && (
+                <Alert>
+                  <ArrowRight className="h-4 w-4" />
+                  <AlertTitle>More Posts Available</AlertTitle>
+                  <AlertDescription>
+                    There are more posts to fetch. The cursor has been auto-filled. Click &quot;Fetch Posts&quot; again to continue.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {/* New Posts List */}
+              {result.newPosts.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-medium mb-2">New Posts Saved:</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {result.newPosts.map((code) => (
+                      <Badge key={code} variant="secondary" className="font-mono text-xs">
+                        {code}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* Sidebar Info */}
+      <div className="space-y-6">
+        {/* How it works */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">How It Works</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm text-muted-foreground">
+            <div className="flex gap-2">
+              <span className="font-bold text-orange">1.</span>
+              <p>Enter a username (e.g., @username)</p>
+            </div>
+            <div className="flex gap-2">
+              <span className="font-bold text-orange">2.</span>
+              <p>Specify how many posts to fetch</p>
+            </div>
+            <div className="flex gap-2">
+              <span className="font-bold text-orange">3.</span>
+              <p>Click &quot;Fetch Posts&quot; to start extraction</p>
+            </div>
+            <div className="flex gap-2">
+              <span className="font-bold text-orange">4.</span>
+              <p>Posts are saved as JSON files in the data directory</p>
+            </div>
+            <div className="flex gap-2">
+              <span className="font-bold text-orange">5.</span>
+              <p>If more posts exist, the cursor auto-fills for pagination</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Data Structure */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Saved Data</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <div className="p-3 bg-muted rounded-lg">
+              <p className="font-medium mb-1">Post files include:</p>
+              <ul className="text-xs text-muted-foreground space-y-1">
+                <li>• code</li>
+                <li>• pk</li>
+                <li>• id</li>
+                <li>• caption.text</li>
+                <li>• image (URL, width, height)</li>
+              </ul>
+            </div>
+            <div className="p-3 bg-muted rounded-lg">
+              <p className="font-medium mb-1">Profile files include:</p>
+              <ul className="text-xs text-muted-foreground space-y-1">
+                <li>• pk</li>
+                <li>• username</li>
+                <li>• full_name</li>
+                <li>• profile_pic_url</li>
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* API Info */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">API Endpoint</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-xs font-mono bg-muted p-2 rounded break-all">
+              ig-scraper5.p.rapidapi.com/user/posts
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// Sync Tab Component
+function SyncTab() {
+  const [posts, setPosts] = useState<PostData[]>([]);
+  const [selectedPosts, setSelectedPosts] = useState<Set<string>>(new Set());
+  const [isLoading, setIsLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const postsPerPage = 12;
+
+  // Dialog states
+  const [removePromoDialog, setRemovePromoDialog] = useState(false);
+  const [promoText, setPromoText] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [extractingAuthor, setExtractingAuthor] = useState(false);
+
+  // Load posts
+  const loadPosts = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/instagram/posts?page=${page}&limit=${postsPerPage}`);
+      const data = await response.json();
+      setPosts(data.posts || []);
+    } catch (error) {
+      console.error('Failed to load posts:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [page, postsPerPage]);
+
+  useEffect(() => {
+    loadPosts();
+  }, [loadPosts]);
+
+  const togglePostSelection = (code: string) => {
+    const newSelection = new Set(selectedPosts);
+    if (newSelection.has(code)) {
+      newSelection.delete(code);
+    } else {
+      newSelection.add(code);
+    }
+    setSelectedPosts(newSelection);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedPosts.size === posts.length) {
+      setSelectedPosts(new Set());
+    } else {
+      setSelectedPosts(new Set(posts.map(p => p.code)));
+    }
+  };
+
+  const handleRemovePromo = async () => {
+    if (!promoText.trim()) return;
+
+    setIsProcessing(true);
+    try {
+      const response = await fetch('/api/instagram/posts/remove-promo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          postCodes: Array.from(selectedPosts),
+          textToRemove: promoText,
+        }),
+      });
+
+      if (response.ok) {
+        setRemovePromoDialog(false);
+        setPromoText('');
+        loadPosts(); // Reload posts
+        setSelectedPosts(new Set());
+      }
+    } catch (error) {
+      console.error('Failed to remove promo:', error);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleExtractAuthor = async () => {
+    setExtractingAuthor(true);
+    try {
+      const response = await fetch('/api/instagram/posts/extract-author', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          postCodes: Array.from(selectedPosts),
+        }),
+      });
+
+      if (response.ok) {
+        loadPosts(); // Reload posts to show updated authors
+        setSelectedPosts(new Set());
+      }
+    } catch (error) {
+      console.error('Failed to extract author:', error);
+    } finally {
+      setExtractingAuthor(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-orange" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Actions Bar */}
+      {posts.length > 0 && (
+        <Card>
+          <CardContent className="py-4">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center gap-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={toggleSelectAll}
+                >
+                  {selectedPosts.size === posts.length && posts.length > 0 ? (
+                    <Check className="mr-2 h-4 w-4" />
+                  ) : (
+                    <div className="mr-2 h-4 w-4 border-2 border-current" />
+                  )}
+                  {selectedPosts.size === posts.length ? 'Deselect All' : 'Select All'}
+                </Button>
+                <Badge variant="secondary">
+                  {selectedPosts.size} selected
+                </Badge>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setRemovePromoDialog(true)}
+                  disabled={selectedPosts.size === 0}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Remove Promo
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleExtractAuthor}
+                  disabled={selectedPosts.size === 0 || extractingAuthor}
+                >
+                  {extractingAuthor ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-4 w-4 mr-2" />
+                  )}
+                  Extract Author
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Posts Grid */}
+      {posts.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center text-muted-foreground">
+            <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p>No posts found. Extract posts from Instagram first.</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {posts.map((post) => (
+            <Card
+              key={post.code}
+              className={cn(
+                'cursor-pointer transition-all hover:shadow-md',
+                selectedPosts.has(post.code) && 'ring-2 ring-orange'
+              )}
+              onClick={() => togglePostSelection(post.code)}
+            >
+              <CardHeader className="p-3 space-y-2">
+                <div className="flex items-start justify-between">
+                  <Checkbox
+                    checked={selectedPosts.has(post.code)}
+                    onCheckedChange={() => togglePostSelection(post.code)}
+                  />
+                  {post.author && (
+                    <Badge variant="secondary" className="text-xs">
+                      {post.author}
+                    </Badge>
+                  )}
+                </div>
+                <div className="aspect-square bg-muted rounded-md overflow-hidden">
+                  <img
+                    src={post.image.url}
+                    alt={post.code}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                </div>
+              </CardHeader>
+              <CardContent className="p-3 pt-0">
+                <p className="text-xs text-muted-foreground line-clamp-3 mb-2">
+                  {post.caption.text}
+                </p>
+                <p className="text-[10px] text-muted-foreground font-mono">
+                  {post.code}
+                </p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {posts.length > 0 && (
+        <div className="flex justify-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={page === 1}
+          >
+            Previous
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage(p => p + 1)}
+            disabled={posts.length < postsPerPage}
+          >
+            Next
+          </Button>
+        </div>
+      )}
+
+      {/* Remove Promo Dialog */}
+      <Dialog open={removePromoDialog} onOpenChange={setRemovePromoDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove Promo Text</DialogTitle>
+            <DialogDescription>
+              Enter the text to remove from the captions of {selectedPosts.size} selected post(s).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="promo-text">Text to Remove</Label>
+              <Textarea
+                id="promo-text"
+                placeholder="Enter the promo text to remove..."
+                value={promoText}
+                onChange={(e) => setPromoText(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setRemovePromoDialog(false)}
+              disabled={isProcessing}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleRemovePromo}
+              disabled={isProcessing || !promoText.trim()}
+            >
+              {isProcessing ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Remove Text
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+export default function InstagramConnectorPage() {
+  return (
     <PageBody>
       <div className="space-y-6">
         {/* Header */}
@@ -199,308 +806,32 @@ export default function InstagramConnectorPage() {
           <div>
             <h1 className="text-3xl font-bold">Instagram Connector</h1>
             <p className="text-muted-foreground mt-1">
-              Extract and save Instagram posts from user profiles
+              Extract and sync Instagram posts
             </p>
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-3">
-          {/* Main Form */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* API Key Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">API Configuration</CardTitle>
-                <CardDescription>
-                  Enter your RapidAPI key for the IG Scraper service
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="api-key">API Key</Label>
-                  <div className="flex gap-2">
-                    <div className="relative flex-1">
-                      <Input
-                        id="api-key"
-                        type={showApiKey ? 'text' : 'password'}
-                        value={apiKey}
-                        onChange={(e) => setApiKey(e.target.value)}
-                        placeholder="Enter your RapidAPI key"
-                        className="pr-10"
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                        onClick={() => setShowApiKey(!showApiKey)}
-                      >
-                        {showApiKey ? (
-                          <EyeOff className="h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          <Eye className="h-4 w-4 text-muted-foreground" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                  {DEFAULT_API_KEY && !apiKey && (
-                    <p className="text-xs text-muted-foreground">
-                      Using default API key from environment
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+        {/* Tabs */}
+        <Tabs defaultValue="extract">
+          <TabsList>
+            <TabsTrigger value="extract">
+              <Download className="h-4 w-4 mr-2" />
+              Extract
+            </TabsTrigger>
+            <TabsTrigger value="sync">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Sync
+            </TabsTrigger>
+          </TabsList>
 
-            {/* Fetch Form */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Extract Posts from Instagram Profile</CardTitle>
-                <CardDescription>
-                  Enter a username to fetch their posts
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Username Input */}
-                <div className="space-y-2">
-                  <Label htmlFor="username">Username</Label>
-                  <Input
-                    id="username"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder="@username"
-                    className={cn(
-                      validation.status === 'invalid' && 'border-destructive focus-visible:ring-destructive',
-                      validation.status === 'valid' && 'border-green-500 focus-visible:ring-green-500'
-                    )}
-                  />
-                  {validation.status !== 'idle' && (
-                    <p className={cn(
-                      'text-xs flex items-center gap-1',
-                      validation.status === 'valid' ? 'text-green-600' : 'text-destructive'
-                    )}>
-                      {validation.status === 'valid' ? (
-                        <CheckCircle2 className="h-3 w-3" />
-                      ) : (
-                        <AlertCircle className="h-3 w-3" />
-                      )}
-                      {validation.message}
-                    </p>
-                  )}
-                </div>
+          <TabsContent value="extract" className="mt-6">
+            <ExtractTab />
+          </TabsContent>
 
-                {/* Number of Posts */}
-                <div className="space-y-2">
-                  <Label htmlFor="posts-count">Number of Posts to Fetch</Label>
-                  <Input
-                    id="posts-count"
-                    type="number"
-                    min="1"
-                    max="100"
-                    value={numberOfPosts}
-                    onChange={(e) => setNumberOfPosts(e.target.value)}
-                  />
-                </div>
-
-                {/* Pagination Cursor */}
-                <div className="space-y-2">
-                  <Label htmlFor="after-cursor">After Cursor (Pagination)</Label>
-                  <Input
-                    id="after-cursor"
-                    value={afterCursor}
-                    onChange={(e) => setAfterCursor(e.target.value)}
-                    placeholder="Auto-filled from previous requests"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    This field is automatically filled when there are more posts to fetch
-                  </p>
-                </div>
-
-                {/* Error Alert */}
-                {error && (
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Error</AlertTitle>
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                )}
-
-                {/* Action Buttons */}
-                <div className="flex gap-2">
-                  <Button
-                    onClick={handleFetch}
-                    disabled={isFetching || validation.status !== 'valid' || !apiKey}
-                    className="flex-1"
-                  >
-                    {isFetching ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Fetching...
-                      </>
-                    ) : (
-                      <>
-                        <Download className="h-4 w-4 mr-2" />
-                        Fetch Posts
-                      </>
-                    )}
-                  </Button>
-                  <Button
-                    onClick={handleReset}
-                    variant="outline"
-                    disabled={isFetching}
-                  >
-                    <RefreshCw className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Results Section */}
-            {result && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <CheckCircle2 className="h-5 w-5 text-green-500" />
-                    Fetch Complete
-                  </CardTitle>
-                  <CardDescription>
-                    Successfully extracted {result.extractedPosts} posts
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Stats */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-950/20 rounded-lg">
-                      <FileText className="h-4 w-4 text-green-600" />
-                      <div>
-                        <p className="text-2xl font-bold text-green-600">{result.newPosts.length}</p>
-                        <p className="text-xs text-muted-foreground">New Posts</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
-                      <User className="h-4 w-4 text-blue-600" />
-                      <div>
-                        <p className="text-2xl font-bold text-blue-600">{result.updatedProfiles.length}</p>
-                        <p className="text-xs text-muted-foreground">Profiles</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-950/20 rounded-lg">
-                      <Database className="h-4 w-4 text-gray-600" />
-                      <div>
-                        <p className="text-2xl font-bold text-gray-600">{result.skippedPosts.length}</p>
-                        <p className="text-xs text-muted-foreground">Skipped</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 p-3 bg-orange-50 dark:bg-orange-950/20 rounded-lg">
-                      <RefreshCw className="h-4 w-4 text-orange-600" />
-                      <div>
-                        <p className="text-2xl font-bold text-orange-600">{result.requestCount}</p>
-                        <p className="text-xs text-muted-foreground">Requests</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Pagination Info */}
-                  {result.hasNextPage && (
-                    <Alert>
-                      <ArrowRight className="h-4 w-4" />
-                      <AlertTitle>More Posts Available</AlertTitle>
-                      <AlertDescription>
-                        There are more posts to fetch. The cursor has been auto-filled. Click &quot;Fetch Posts&quot; again to continue.
-                      </AlertDescription>
-                    </Alert>
-                  )}
-
-                  {/* New Posts List */}
-                  {result.newPosts.length > 0 && (
-                    <div>
-                      <h4 className="text-sm font-medium mb-2">New Posts Saved:</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {result.newPosts.map((code) => (
-                          <Badge key={code} variant="secondary" className="font-mono text-xs">
-                            {code}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-          </div>
-
-          {/* Sidebar Info */}
-          <div className="space-y-6">
-            {/* How it works */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">How It Works</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm text-muted-foreground">
-                <div className="flex gap-2">
-                  <span className="font-bold text-orange">1.</span>
-                  <p>Enter a username (e.g., @username)</p>
-                </div>
-                <div className="flex gap-2">
-                  <span className="font-bold text-orange">2.</span>
-                  <p>Specify how many posts to fetch</p>
-                </div>
-                <div className="flex gap-2">
-                  <span className="font-bold text-orange">3.</span>
-                  <p>Click &quot;Fetch Posts&quot; to start extraction</p>
-                </div>
-                <div className="flex gap-2">
-                  <span className="font-bold text-orange">4.</span>
-                  <p>Posts are saved as JSON files in the data directory</p>
-                </div>
-                <div className="flex gap-2">
-                  <span className="font-bold text-orange">5.</span>
-                  <p>If more posts exist, the cursor auto-fills for pagination</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Data Structure */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Saved Data</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                <div className="p-3 bg-muted rounded-lg">
-                  <p className="font-medium mb-1">Post files include:</p>
-                  <ul className="text-xs text-muted-foreground space-y-1">
-                    <li>• code</li>
-                    <li>• pk</li>
-                    <li>• id</li>
-                    <li>• caption.text</li>
-                    <li>• image (URL, width, height)</li>
-                  </ul>
-                </div>
-                <div className="p-3 bg-muted rounded-lg">
-                  <p className="font-medium mb-1">Profile files include:</p>
-                  <ul className="text-xs text-muted-foreground space-y-1">
-                    <li>• pk</li>
-                    <li>• username</li>
-                    <li>• full_name</li>
-                    <li>• profile_pic_url</li>
-                  </ul>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* API Info */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">API Endpoint</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-xs font-mono bg-muted p-2 rounded break-all">
-                  ig-scraper5.p.rapidapi.com/user/stories
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+          <TabsContent value="sync" className="mt-6">
+            <SyncTab />
+          </TabsContent>
+        </Tabs>
       </div>
     </PageBody>
   );
