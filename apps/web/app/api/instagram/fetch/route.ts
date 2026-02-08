@@ -139,16 +139,19 @@ function getBestImage(candidates?: InstagramImageCandidate[] | null): { url: str
 
 // Fetch posts from Instagram API
 async function fetchInstagramPosts(
-  usernameOrId: string,
+  username: string,
   apiKey: string,
   afterCursor?: string
 ): Promise<{ data: InstagramApiResponse; error?: string }> {
   const url = new URL('https://ig-scraper5.p.rapidapi.com/user/posts');
-  url.searchParams.set('id_or_username', usernameOrId);
+  url.searchParams.set('username', username);
 
   if (afterCursor) {
     url.searchParams.set('after_cursor', afterCursor);
   }
+
+  // Log the final URL for debugging
+  console.log('Instagram API Request URL:', url.toString());
 
   try {
     const response = await fetch(url.toString(), {
@@ -181,11 +184,11 @@ async function fetchInstagramPosts(
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { usernameOrId, numberOfPosts, afterCursor, apiKey } = body;
+    const { username, numberOfPosts, afterCursor, apiKey } = body;
 
     // Validate input
-    if (!usernameOrId) {
-      return NextResponse.json({ error: 'Username or ID is required' }, { status: 400 });
+    if (!username) {
+      return NextResponse.json({ error: 'Username is required' }, { status: 400 });
     }
 
     if (!apiKey) {
@@ -208,7 +211,7 @@ export async function POST(request: NextRequest) {
       requestCount++;
 
       const { data, error } = await fetchInstagramPosts(
-        usernameOrId,
+        username,
         apiKey,
         currentAfterCursor
       );
