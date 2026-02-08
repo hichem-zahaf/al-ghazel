@@ -17,6 +17,7 @@ import {
   Trash2,
   Sparkles,
   Check,
+  Expand,
 } from 'lucide-react';
 
 import { PageBody } from '@kit/ui/page';
@@ -511,28 +512,45 @@ function ExtractTab() {
 function SyncTab() {
   const [posts, setPosts] = useState<PostData[]>([]);
   const [selectedPosts, setSelectedPosts] = useState<Set<string>>(new Set());
+  const [allPostCodes, setAllPostCodes] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const postsPerPage = 12;
+  const [pageSize, setPageSize] = useState(12);
+  const [totalPosts, setTotalPosts] = useState(0);
+
+  // View theme: 'compact' | 'default' | 'expanded'
+  const [viewTheme, setViewTheme] = useState<'compact' | 'default' | 'expanded'>('default');
 
   // Dialog states
   const [removePromoDialog, setRemovePromoDialog] = useState(false);
+  const [deleteDialog, setDeleteDialog] = useState(false);
+  const [viewPostDialog, setViewPostDialog] = useState(false);
+  const [selectedPost, setSelectedPost] = useState<PostData | null>(null);
   const [promoText, setPromoText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [extractingAuthor, setExtractingAuthor] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Load posts
   const loadPosts = useCallback(async () => {
     try {
-      const response = await fetch(`/api/instagram/posts?page=${page}&limit=${postsPerPage}`);
+      const response = await fetch(`/api/instagram/posts?page=${page}&limit=${pageSize}`);
       const data = await response.json();
       setPosts(data.posts || []);
+      setTotalPosts(data.total || 0);
+
+      // Load all post codes for "Select All" functionality
+      if (allPostCodes.length === 0) {
+        const allResponse = await fetch('/api/instagram/posts?page=1&limit=1000');
+        const allData = await allResponse.json();
+        setAllPostCodes((allData.posts || []).map((p: PostData) => p.code));
+      }
     } catch (error) {
       console.error('Failed to load posts:', error);
     } finally {
       setIsLoading(false);
     }
-  }, [page, postsPerPage]);
+  }, [page, pageSize, allPostCodes.length]);
 
   useEffect(() => {
     loadPosts();
@@ -548,12 +566,18 @@ function SyncTab() {
     setSelectedPosts(newSelection);
   };
 
-  const toggleSelectAll = () => {
-    if (selectedPosts.size === posts.length) {
+  const toggleSelectAll = async () => {
+    if (selectedPosts.size === allPostCodes.length) {
       setSelectedPosts(new Set());
     } else {
-      setSelectedPosts(new Set(posts.map(p => p.code)));
+      setSelectedPosts(new Set(allPostCodes));
     }
+  };
+
+  const handleViewPost = (post: PostData, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setSelectedPost(post);
+    setViewPostDialog(true);
   };
 
   const handleRemovePromo = async () => {
@@ -575,11 +599,36 @@ function SyncTab() {
         setPromoText('');
         loadPosts(); // Reload posts
         setSelectedPosts(new Set());
+        setAllPostCodes([]); // Reset all post codes
       }
     } catch (error) {
       console.error('Failed to remove promo:', error);
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      const response = await fetch('/api/instagram/posts/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          postCodes: Array.from(selectedPosts),
+        }),
+      });
+
+      if (response.ok) {
+        setDeleteDialog(false);
+        loadPosts(); // Reload posts
+        setSelectedPosts(new Set());
+        setAllPostCodes([]); // Reset all post codes
+      }
+    } catch (error) {
+      console.error('Failed to delete posts:', error);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -605,6 +654,30 @@ function SyncTab() {
     }
   };
 
+  const getGridCols = () => {
+    switch (viewTheme) {
+      case 'compact':
+        return 'grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10';
+      case 'expanded':
+        return 'grid-cols-1 md:grid-cols-2';
+      default:
+        return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4';
+    }
+  };
+
+  const getCardPadding = () => {
+    switch (viewTheme) {
+      case 'compact':
+        return 'p-2';
+      case 'expanded':
+        return 'p-4';
+      default:
+        return 'p-3';
+    }
+  };
+
+  const totalPages = Math.ceil(totalPosts / pageSize);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -626,19 +699,46 @@ function SyncTab() {
                   size="sm"
                   onClick={toggleSelectAll}
                 >
-                  {selectedPosts.size === posts.length && posts.length > 0 ? (
+                  {selectedPosts.size === allPostCodes.length && allPostCodes.length > 0 ? (
                     <Check className="mr-2 h-4 w-4" />
                   ) : (
                     <div className="mr-2 h-4 w-4 border-2 border-current" />
                   )}
-                  {selectedPosts.size === posts.length ? 'Deselect All' : 'Select All'}
+                  {selectedPosts.size === allPostCodes.length ? 'Deselect All' : 'Select All'}
                 </Button>
                 <Badge variant="secondary">
-                  {selectedPosts.size} selected
+                  {selectedPosts.size} / {allPostCodes.length} selected
                 </Badge>
               </div>
 
               <div className="flex items-center gap-2">
+                {/* Page Size Selector */}
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(parseInt(e.target.value, 10));
+                    setPage(1);
+                  }}
+                  className="h-8 rounded-md border border-input bg-background px-3 py-1 text-sm"
+                >
+                  <option value="12">12 per page</option>
+                  <option value="24">24 per page</option>
+                  <option value="48">48 per page</option>
+                  <option value="96">96 per page</option>
+                </select>
+
+                {/* View Theme Selector */}
+                <select
+                  value={viewTheme}
+                  onChange={(e) => setViewTheme(e.target.value as 'compact' | 'default' | 'expanded')}
+                  className="h-8 rounded-md border border-input bg-background px-3 py-1 text-sm"
+                >
+                  <option value="compact">Compact</option>
+                  <option value="default">Default</option>
+                  <option value="expanded">Expanded</option>
+                </select>
+
+                {/* Actions */}
                 <Button
                   variant="outline"
                   size="sm"
@@ -661,6 +761,19 @@ function SyncTab() {
                   )}
                   Extract Author
                 </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setDeleteDialog(true)}
+                  disabled={selectedPosts.size === 0 || isDeleting}
+                >
+                  {isDeleting ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <AlertCircle className="h-4 w-4 mr-2" />
+                  )}
+                  Delete
+                </Button>
               </div>
             </div>
           </CardContent>
@@ -676,29 +789,44 @@ function SyncTab() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className={`grid gap-4 ${getGridCols()}`}>
           {posts.map((post) => (
             <Card
               key={post.code}
               className={cn(
                 'cursor-pointer transition-all hover:shadow-md',
-                selectedPosts.has(post.code) && 'ring-2 ring-orange'
+                selectedPosts.has(post.code) && 'ring-2 ring-orange',
+                getCardPadding()
               )}
               onClick={() => togglePostSelection(post.code)}
             >
-              <CardHeader className="p-3 space-y-2">
-                <div className="flex items-start justify-between">
-                  <Checkbox
-                    checked={selectedPosts.has(post.code)}
-                    onCheckedChange={() => togglePostSelection(post.code)}
-                  />
-                  {post.author && (
-                    <Badge variant="secondary" className="text-xs">
-                      {post.author}
-                    </Badge>
-                  )}
+              <CardHeader className={cn('space-y-2', viewTheme === 'compact' ? 'p-1' : '')}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      checked={selectedPosts.has(post.code)}
+                      onCheckedChange={() => togglePostSelection(post.code)}
+                    />
+                    {post.author && (
+                      <Badge variant="secondary" className={cn('text-xs', viewTheme === 'compact' ? 'text-[10px]' : '')}>
+                        {post.author}
+                      </Badge>
+                    )}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={cn('h-7 w-7 p-0', viewTheme === 'compact' && 'h-5 w-5')}
+                    onClick={(e) => handleViewPost(post, e)}
+                  >
+                    <Expand className={cn('h-4 w-4', viewTheme === 'compact' && 'h-3 w-3')} />
+                  </Button>
                 </div>
-                <div className="aspect-square bg-muted rounded-md overflow-hidden">
+                <div className={cn(
+                  'bg-muted rounded-md overflow-hidden',
+                  viewTheme === 'compact' ? 'aspect-square' : 'aspect-square',
+                  viewTheme === 'expanded' && 'aspect-[4/3]'
+                )}>
                   <img
                     src={post.image.url}
                     alt={post.code}
@@ -707,22 +835,27 @@ function SyncTab() {
                   />
                 </div>
               </CardHeader>
-              <CardContent className="p-3 pt-0">
-                <p className="text-xs text-muted-foreground line-clamp-3 mb-2">
-                  {post.caption.text}
-                </p>
-                <p className="text-[10px] text-muted-foreground font-mono">
-                  {post.code}
-                </p>
-              </CardContent>
+              {viewTheme !== 'compact' && (
+                <CardContent className={cn('pt-0', viewTheme === 'expanded' ? 'space-y-2' : '')}>
+                  <p className={cn(
+                    'text-muted-foreground mb-2',
+                    viewTheme === 'expanded' ? 'text-sm line-clamp-4' : 'text-xs line-clamp-3'
+                  )}>
+                    {post.caption.text}
+                  </p>
+                  <p className={cn('text-muted-foreground font-mono', viewTheme === 'expanded' ? 'text-xs' : 'text-[10px]')}>
+                    {post.code}
+                  </p>
+                </CardContent>
+              )}
             </Card>
           ))}
         </div>
       )}
 
       {/* Pagination */}
-      {posts.length > 0 && (
-        <div className="flex justify-center gap-2">
+      {posts.length > 0 && totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 flex-wrap">
           <Button
             variant="outline"
             size="sm"
@@ -731,11 +864,37 @@ function SyncTab() {
           >
             Previous
           </Button>
+
+          {Array.from({ length: Math.min(totalPages, 10) }, (_, i) => {
+            let pageNum;
+            if (totalPages <= 10) {
+              pageNum = i + 1;
+            } else if (page <= 5) {
+              pageNum = i + 1;
+            } else if (page >= totalPages - 4) {
+              pageNum = totalPages - 9 + i;
+            } else {
+              pageNum = page - 5 + i;
+            }
+
+            return (
+              <Button
+                key={pageNum}
+                variant={page === pageNum ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setPage(pageNum)}
+                className="min-w-[2.5rem]"
+              >
+                {pageNum}
+              </Button>
+            );
+          })}
+
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setPage(p => p + 1)}
-            disabled={posts.length < postsPerPage}
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
           >
             Next
           </Button>
@@ -786,6 +945,110 @@ function SyncTab() {
                   Remove Text
                 </>
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialog} onOpenChange={setDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Posts</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete {selectedPosts.size} post(s)? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialog(false)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <AlertCircle className="h-4 w-4 mr-2" />
+                  Delete {selectedPosts.size} Post{selectedPosts.size !== 1 ? 's' : ''}
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Post Dialog */}
+      <Dialog open={viewPostDialog} onOpenChange={setViewPostDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Post Details</DialogTitle>
+            <DialogDescription>
+              Full information about this Instagram post
+            </DialogDescription>
+          </DialogHeader>
+          {selectedPost && (
+            <div className="space-y-4">
+              {/* Post Image */}
+              <div className="aspect-square bg-muted rounded-lg overflow-hidden">
+                <img
+                  src={selectedPost.image.url}
+                  alt={selectedPost.code}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+
+              {/* Post Info */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground">Code</Label>
+                  <p className="font-mono text-sm">{selectedPost.code}</p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground">PK</Label>
+                  <p className="font-mono text-sm">{selectedPost.pk}</p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground">ID</Label>
+                  <p className="font-mono text-sm">{selectedPost.id}</p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground">Author</Label>
+                  <p className="text-sm">{selectedPost.author || 'Not set'}</p>
+                </div>
+              </div>
+
+              {/* Caption */}
+              <div className="space-y-2">
+                <Label className="text-muted-foreground">Caption</Label>
+                <div className="p-3 bg-muted rounded-lg max-h-60 overflow-y-auto">
+                  <p className="text-sm whitespace-pre-wrap">{selectedPost.caption.text}</p>
+                </div>
+              </div>
+
+              {/* Image Info */}
+              <div className="space-y-2">
+                <Label className="text-muted-foreground">Image Details</Label>
+                <div className="p-3 bg-muted rounded-lg space-y-1">
+                  <p className="text-xs"><span className="font-medium">URL:</span> <span className="font-mono break-all">{selectedPost.image.url}</span></p>
+                  <p className="text-xs"><span className="font-medium">Size:</span> {selectedPost.image.width} x {selectedPost.image.height}</p>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setViewPostDialog(false)}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>
