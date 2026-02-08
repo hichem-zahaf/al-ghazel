@@ -18,6 +18,7 @@ import {
   Sparkles,
   Check,
   Expand,
+  Pencil,
 } from 'lucide-react';
 
 import { PageBody } from '@kit/ui/page';
@@ -74,6 +75,7 @@ interface PostData {
     height: number;
   };
   author?: string;
+  title?: string;
 }
 
 // Default API key from environment
@@ -525,11 +527,15 @@ function SyncTab() {
   const [removePromoDialog, setRemovePromoDialog] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState(false);
   const [viewPostDialog, setViewPostDialog] = useState(false);
+  const [editPostDialog, setEditPostDialog] = useState(false);
   const [selectedPost, setSelectedPost] = useState<PostData | null>(null);
+  const [editPost, setEditPost] = useState<PostData | null>(null);
   const [promoText, setPromoText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [extractingAuthor, setExtractingAuthor] = useState(false);
+  const [extractingTitle, setExtractingTitle] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Load posts
   const loadPosts = useCallback(async () => {
@@ -578,6 +584,41 @@ function SyncTab() {
     if (e) e.stopPropagation();
     setSelectedPost(post);
     setViewPostDialog(true);
+  };
+
+  const handleEditPost = (post: PostData, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setSelectedPost(post);
+    setEditPost({ ...post });
+    setEditPostDialog(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editPost) return;
+
+    setIsSaving(true);
+    try {
+      const response = await fetch('/api/instagram/posts/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: editPost.code,
+          caption: editPost.caption.text,
+          author: editPost.author || null,
+          title: editPost.title || null,
+        }),
+      });
+
+      if (response.ok) {
+        setEditPostDialog(false);
+        setEditPost(null);
+        loadPosts(); // Reload posts
+      }
+    } catch (error) {
+      console.error('Failed to save post:', error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleRemovePromo = async () => {
@@ -651,6 +692,28 @@ function SyncTab() {
       console.error('Failed to extract author:', error);
     } finally {
       setExtractingAuthor(false);
+    }
+  };
+
+  const handleExtractTitle = async () => {
+    setExtractingTitle(true);
+    try {
+      const response = await fetch('/api/instagram/posts/extract-title', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          postCodes: Array.from(selectedPosts),
+        }),
+      });
+
+      if (response.ok) {
+        loadPosts(); // Reload posts to show updated titles
+        setSelectedPosts(new Set());
+      }
+    } catch (error) {
+      console.error('Failed to extract title:', error);
+    } finally {
+      setExtractingTitle(false);
     }
   };
 
@@ -762,6 +825,19 @@ function SyncTab() {
                   Extract Author
                 </Button>
                 <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleExtractTitle}
+                  disabled={selectedPosts.size === 0 || extractingTitle}
+                >
+                  {extractingTitle ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <FileText className="h-4 w-4 mr-2" />
+                  )}
+                  Extract Title
+                </Button>
+                <Button
                   variant="destructive"
                   size="sm"
                   onClick={() => setDeleteDialog(true)}
@@ -813,14 +889,24 @@ function SyncTab() {
                       </Badge>
                     )}
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className={cn('h-7 w-7 p-0', viewTheme === 'compact' && 'h-5 w-5')}
-                    onClick={(e) => handleViewPost(post, e)}
-                  >
-                    <Expand className={cn('h-4 w-4', viewTheme === 'compact' && 'h-3 w-3')} />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={cn('h-7 w-7 p-0', viewTheme === 'compact' && 'h-5 w-5')}
+                      onClick={(e) => handleEditPost(post, e)}
+                    >
+                      <Pencil className={cn('h-4 w-4', viewTheme === 'compact' && 'h-3 w-3')} />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={cn('h-7 w-7 p-0', viewTheme === 'compact' && 'h-5 w-5')}
+                      onClick={(e) => handleViewPost(post, e)}
+                    >
+                      <Expand className={cn('h-4 w-4', viewTheme === 'compact' && 'h-3 w-3')} />
+                    </Button>
+                  </div>
                 </div>
                 <div className={cn(
                   'bg-muted rounded-md overflow-hidden',
@@ -1023,6 +1109,10 @@ function SyncTab() {
                   <p className="font-mono text-sm">{selectedPost.id}</p>
                 </div>
                 <div className="space-y-2">
+                  <Label className="text-muted-foreground">Title</Label>
+                  <p className="text-sm">{selectedPost.title || 'Not set'}</p>
+                </div>
+                <div className="space-y-2">
                   <Label className="text-muted-foreground">Author</Label>
                   <p className="text-sm">{selectedPost.author || 'Not set'}</p>
                 </div>
@@ -1049,6 +1139,103 @@ function SyncTab() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setViewPostDialog(false)}>
               Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Post Dialog */}
+      <Dialog open={editPostDialog} onOpenChange={setEditPostDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Post</DialogTitle>
+            <DialogDescription>
+              Edit the caption and author information for this post
+            </DialogDescription>
+          </DialogHeader>
+          {editPost && (
+            <div className="space-y-4">
+              {/* Post Image Preview */}
+              <div className="aspect-square max-w-xs mx-auto bg-muted rounded-lg overflow-hidden">
+                <img
+                  src={editPost.image.url}
+                  alt={editPost.code}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+
+              {/* Read-only fields */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground">Code</Label>
+                  <p className="font-mono text-sm">{editPost.code}</p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground">PK</Label>
+                  <p className="font-mono text-sm">{editPost.pk}</p>
+                </div>
+              </div>
+
+              {/* Editable fields */}
+              <div className="space-y-2">
+                <Label htmlFor="edit-caption">Caption</Label>
+                <Textarea
+                  id="edit-caption"
+                  value={editPost.caption.text}
+                  onChange={(e) => setEditPost({ ...editPost, caption: { text: e.target.value } })}
+                  rows={8}
+                  placeholder="Enter caption text..."
+                  className="font-mono text-sm"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-title">Title</Label>
+                <Input
+                  id="edit-title"
+                  value={editPost.title || ''}
+                  onChange={(e) => setEditPost({ ...editPost, title: e.target.value || undefined })}
+                  placeholder="Enter book title..."
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-author">Author</Label>
+                <Input
+                  id="edit-author"
+                  value={editPost.author || ''}
+                  onChange={(e) => setEditPost({ ...editPost, author: e.target.value || undefined })}
+                  placeholder="Enter author name..."
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setEditPostDialog(false);
+                setEditPost(null);
+              }}
+              disabled={isSaving}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveEdit}
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Check className="h-4 w-4 mr-2" />
+                  Save Changes
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
