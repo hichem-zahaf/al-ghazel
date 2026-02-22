@@ -76,7 +76,7 @@ export function HeroSection({ featuredAuthor, featuredBooks = [] }: HeroSectionP
 
             {/* Author Profile Card */}
             {featuredAuthor && (
-              <div className="mb-12 p-6 bg-white dark:bg-card rounded-2xl shadow-sm border-b-4 border-orange">
+              <div className="mb-12 p-6 bg-white dark:bg-card rounded-2xl shadow-sm border border-orange">
                 <div className="flex items-start gap-6">
                   <div className="relative w-24 h-24 flex-shrink-0">
                     <Image

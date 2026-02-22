@@ -44,7 +44,7 @@ function MercuryLayout({ author, reason, featuredBooks }: { author: AuthorOfTheD
         <div className="flex flex-col lg:flex-row gap-12 items-start">
           {/* Author Profile */}
           <div className="lg:w-1/3 flex-shrink-0">
-            <Badge className="mb-4 bg-orange text-white">Author of the Day</Badge>
+            <Badge className="mx-auto mb-4 bg-orange text-white">Author of the Day</Badge>
 
             <div className="relative w-48 h-48 mx-auto lg:mx-0 mb-6">
               <Image
