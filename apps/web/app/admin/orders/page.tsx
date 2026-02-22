@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Package,
   TrendingUp,
@@ -18,8 +18,11 @@ import {
   Filter,
   Calendar,
   Search,
+  Loader2,
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { getSupabaseBrowserClient } from '@kit/supabase/browser-client';
 
 import { PageBody } from '@kit/ui/page';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@kit/ui/card';
@@ -109,91 +112,55 @@ interface Order {
   updatedAt: Date;
 }
 
-// Mock Data
-const mockOrders: Order[] = [
-  {
-    id: 'o1',
-    orderNumber: 'ORD-2024-001',
-    account: { id: 'a1', name: 'John Doe', email: 'john@example.com' },
-    status: 'shipped',
-    deliveryStatus: 'in_transit',
-    paymentStatus: 'completed',
-    subtotal: 45.97,
-    taxAmount: 3.68,
-    shippingAmount: 5.99,
-    discountAmount: 0,
-    total: 55.64,
-    items: [
-      {
-        id: 'i1',
-        book: { id: 'b1', title: 'The Midnight Library', author: 'Matt Haig', coverImage: '' },
-        quantity: 1,
-        unitPrice: 16.99,
-        totalPrice: 16.99,
-      },
-      {
-        id: 'i2',
-        book: { id: 'b2', title: 'Atomic Habits', author: 'James Clear', coverImage: '' },
-        quantity: 2,
-        unitPrice: 14.50,
-        totalPrice: 28.98,
-      },
-    ],
-    shippingAddress: {
-      name: 'John Doe',
-      email: 'john@example.com',
-      phone: '+1234567890',
-      addressLine1: '123 Main St',
-      addressLine2: 'Apt 4B',
-      city: 'New York',
-      state: 'NY',
-      postalCode: '10001',
-      country: 'USA',
+// Fetch orders hook with real-time updates
+function useOrders() {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    // Create Supabase client for realtime
+    const supabase = getSupabaseBrowserClient();
+
+    // Subscribe to orders table changes
+    const channel = supabase
+      .channel('admin-orders-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+          schema: 'public',
+          table: 'orders',
+        },
+        () => {
+          // Refetch orders when any change occurs
+          queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
+        }
+      )
+      .subscribe();
+
+    // Cleanup on unmount
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
+  return useQuery({
+    queryKey: ['admin-orders'],
+    queryFn: async () => {
+      const response = await fetch('/api/admin/orders');
+      if (!response.ok) {
+        throw new Error('Failed to fetch orders');
+      }
+      const result = await response.json();
+      return result.data as Order[];
     },
-    estimatedDeliveryDate: new Date('2024-02-02'),
-    trackingNumber: 'TRK123456789',
-    carrier: 'FedEx',
-    createdAt: new Date('2024-01-28'),
-    updatedAt: new Date('2024-01-28'),
-  },
-  {
-    id: 'o2',
-    orderNumber: 'ORD-2024-002',
-    account: { id: 'a2', name: 'Jane Smith', email: 'jane@example.com' },
-    status: 'processing',
-    deliveryStatus: 'preparing',
-    paymentStatus: 'completed',
-    subtotal: 12.99,
-    taxAmount: 1.04,
-    shippingAmount: 3.99,
-    discountAmount: 0,
-    total: 18.02,
-    items: [
-      {
-        id: 'i3',
-        book: { id: 'b3', title: 'The Silent Patient', author: 'Alex Michaelides', coverImage: '' },
-        quantity: 1,
-        unitPrice: 12.99,
-        totalPrice: 12.99,
-      },
-    ],
-    shippingAddress: {
-      name: 'Jane Smith',
-      email: 'jane@example.com',
-      phone: '+1234567890',
-      addressLine1: '456 Oak Ave',
-      addressLine2: '',
-      city: 'Los Angeles',
-      state: 'CA',
-      postalCode: '90001',
-      country: 'USA',
-    },
-    estimatedDeliveryDate: new Date('2024-02-05'),
-    createdAt: new Date('2024-01-27'),
-    updatedAt: new Date('2024-01-27'),
-  },
-  // Add more mock orders as needed...
-];
+    // No cache for admin dashboard - always fetch fresh data
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
+    refetchOnReconnect: true,
+  });
+}
 
 // Status Badge Components
 function getOrderStatusBadge(status: OrderStatus) {
@@ -462,6 +429,9 @@ export default function AdminOrdersPage() {
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Fetch orders from API
+  const { data: orders = [], isLoading, error, refetch } = useOrders();
+
   // Table columns definition
   const columns = [
     {
@@ -516,7 +486,7 @@ export default function AdminOrdersPage() {
 
   // Filter data
   const filteredData = useMemo(() => {
-    return mockOrders.filter((order) => {
+    return orders.filter((order) => {
       const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
       const matchesPaymentStatus = paymentStatusFilter === 'all' || order.paymentStatus === paymentStatusFilter;
       const matchesSearch =
@@ -527,7 +497,7 @@ export default function AdminOrdersPage() {
 
       return matchesStatus && matchesPaymentStatus && matchesSearch;
     });
-  }, [statusFilter, paymentStatusFilter, searchQuery]);
+  }, [orders, statusFilter, paymentStatusFilter, searchQuery]);
 
   const handleRowClick = (order: Order) => {
     setSelectedOrder(order);
@@ -540,8 +510,7 @@ export default function AdminOrdersPage() {
   };
 
   const handleRefresh = () => {
-    console.log('Refreshing data...');
-    // Implement refresh functionality
+    refetch();
   };
 
   return (
@@ -562,10 +531,14 @@ export default function AdminOrdersPage() {
               <CardTitle className="text-sm font-medium text-muted-foreground">Total Orders</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{mockOrders.length}</div>
+              {isLoading ? (
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              ) : (
+                <div className="text-2xl font-bold">{orders.length}</div>
+              )}
               <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
                 <TrendingUp className="h-3 w-3 text-green-500" />
-                +12.5% from last month
+                All time orders
               </p>
             </CardContent>
           </Card>
@@ -574,7 +547,11 @@ export default function AdminOrdersPage() {
               <CardTitle className="text-sm font-medium text-muted-foreground">Pending</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{mockOrders.filter(o => o.status === 'pending').length}</div>
+              {isLoading ? (
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              ) : (
+                <div className="text-2xl font-bold">{orders.filter(o => o.status === 'pending').length}</div>
+              )}
               <p className="text-xs text-muted-foreground mt-1">Needs attention</p>
             </CardContent>
           </Card>
@@ -583,7 +560,11 @@ export default function AdminOrdersPage() {
               <CardTitle className="text-sm font-medium text-muted-foreground">Processing</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{mockOrders.filter(o => o.status === 'processing').length}</div>
+              {isLoading ? (
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              ) : (
+                <div className="text-2xl font-bold">{orders.filter(o => o.status === 'processing').length}</div>
+              )}
               <p className="text-xs text-muted-foreground mt-1">Being prepared</p>
             </CardContent>
           </Card>
@@ -592,12 +573,16 @@ export default function AdminOrdersPage() {
               <CardTitle className="text-sm font-medium text-muted-foreground">Revenue</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                ${mockOrders.reduce((sum, o) => sum + o.total, 0).toFixed(2)}
-              </div>
+              {isLoading ? (
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              ) : (
+                <div className="text-2xl font-bold">
+                  ${orders.reduce((sum, o) => sum + o.total, 0).toFixed(2)}
+                </div>
+              )}
               <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
                 <TrendingUp className="h-3 w-3 text-green-500" />
-                +8.2% from last month
+                All time revenue
               </p>
             </CardContent>
           </Card>
@@ -614,52 +599,77 @@ export default function AdminOrdersPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <AdminDataTable
-              columns={columns}
-              data={filteredData}
-              searchable={true}
-              searchPlaceholder="Search by order number, customer name, or email..."
-              filterable={true}
-              filters={[
-                {
-                  key: 'status',
-                  label: 'Status',
-                  type: 'select',
-                  options: [
-                    { value: 'all', label: 'All Statuses' },
-                    { value: 'pending', label: 'Pending' },
-                    { value: 'processing', label: 'Processing' },
-                    { value: 'shipped', label: 'Shipped' },
-                    { value: 'delivered', label: 'Delivered' },
-                    { value: 'cancelled', label: 'Cancelled' },
-                  ],
-                },
-                {
-                  key: 'paymentStatus',
-                  label: 'Payment',
-                  type: 'select',
-                  options: [
-                    { value: 'all', label: 'All Payments' },
-                    { value: 'pending', label: 'Pending' },
-                    { value: 'completed', label: 'Completed' },
-                    { value: 'failed', label: 'Failed' },
-                    { value: 'refunded', label: 'Refunded' },
-                  ],
-                },
-              ]}
-              selectable={true}
-              pagination={true}
-              pageSize={10}
-              viewModeToggleable={true}
-              defaultViewMode={viewMode}
-              onRowClick={handleRowClick}
-              onExport={handleExport}
-              onRefresh={handleRefresh}
-              renderCard={(order) => (
-                <OrderCard order={order as Order} onClick={() => handleRowClick(order as Order)} />
-              )}
-              emptyMessage="No orders found"
-            />
+            {isLoading ? (
+              <div className="flex items-center justify-center py-16">
+                <div className="flex flex-col items-center gap-3">
+                  <Loader2 className="h-8 w-8 animate-spin text-orange" />
+                  <p className="text-sm text-muted-foreground">Loading orders...</p>
+                </div>
+              </div>
+            ) : error ? (
+              <div className="flex flex-col items-center justify-center py-16">
+                <XCircle className="h-12 w-12 text-destructive mb-3" />
+                <p className="text-lg font-semibold mb-2">Failed to load orders</p>
+                <p className="text-sm text-muted-foreground mb-4">There was an error fetching the orders data</p>
+                <Button variant="outline" onClick={handleRefresh} className="gap-2">
+                  <RefreshCw className="h-4 w-4" />
+                  Try Again
+                </Button>
+              </div>
+            ) : orders.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16">
+                <ShoppingBag className="h-12 w-12 text-muted-foreground mb-3" />
+                <p className="text-lg font-semibold mb-2">No orders found</p>
+                <p className="text-sm text-muted-foreground">Orders will appear here once customers make purchases</p>
+              </div>
+            ) : (
+              <AdminDataTable
+                columns={columns}
+                data={filteredData}
+                searchable={true}
+                searchPlaceholder="Search by order number, customer name, or email..."
+                filterable={true}
+                filters={[
+                  {
+                    key: 'status',
+                    label: 'Status',
+                    type: 'select',
+                    options: [
+                      { value: 'all', label: 'All Statuses' },
+                      { value: 'pending', label: 'Pending' },
+                      { value: 'processing', label: 'Processing' },
+                      { value: 'shipped', label: 'Shipped' },
+                      { value: 'delivered', label: 'Delivered' },
+                      { value: 'cancelled', label: 'Cancelled' },
+                    ],
+                  },
+                  {
+                    key: 'paymentStatus',
+                    label: 'Payment',
+                    type: 'select',
+                    options: [
+                      { value: 'all', label: 'All Payments' },
+                      { value: 'pending', label: 'Pending' },
+                      { value: 'completed', label: 'Completed' },
+                      { value: 'failed', label: 'Failed' },
+                      { value: 'refunded', label: 'Refunded' },
+                    ],
+                  },
+                ]}
+                selectable={true}
+                pagination={true}
+                pageSize={10}
+                viewModeToggleable={true}
+                defaultViewMode={viewMode}
+                onRowClick={handleRowClick}
+                onExport={handleExport}
+                onRefresh={handleRefresh}
+                renderCard={(order) => (
+                  <OrderCard order={order as Order} onClick={() => handleRowClick(order as Order)} />
+                )}
+                emptyMessage="No orders found"
+              />
+            )}
           </CardContent>
         </Card>
 
