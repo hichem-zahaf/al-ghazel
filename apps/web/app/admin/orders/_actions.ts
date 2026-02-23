@@ -60,6 +60,7 @@ export interface Order {
 
 export interface UpdateOrderData {
   status?: OrderStatus;
+  paymentStatus?: PaymentStatus;
   trackingNumber?: string;
   carrier?: string;
   adminNotes?: string;
@@ -199,6 +200,7 @@ export async function updateOrderAction({ orderId, updates }: { orderId: string;
 
   const updateData: any = {};
   if (updates.status !== undefined) updateData.status = updates.status;
+  if (updates.paymentStatus !== undefined) updateData.payment_status = updates.paymentStatus;
   if (updates.trackingNumber !== undefined) updateData.tracking_number = updates.trackingNumber;
   if (updates.carrier !== undefined) updateData.carrier = updates.carrier;
   if (updates.adminNotes !== undefined) updateData.admin_notes = updates.adminNotes;

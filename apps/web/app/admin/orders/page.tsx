@@ -116,6 +116,7 @@ function useUpdateOrder() {
         orderId,
         updates: {
           status: updates.status,
+          paymentStatus: updates.paymentStatus,
           trackingNumber: updates.trackingNumber,
           carrier: updates.carrier,
           adminNotes: updates.adminNotes,
@@ -188,20 +189,42 @@ function StatusCell({
   onStatusChange,
 }: {
   order: Order;
-  onStatusChange: (orderId: string, newStatus: OrderStatus) => void;
+  onStatusChange: (orderId: string, newStatus: OrderStatus, newPaymentStatus?: PaymentStatus) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [isPending, setIsPending] = useState(false);
 
+  // Determine payment status based on order status
+  const getPaymentStatusForOrderStatus = (orderStatus: OrderStatus): PaymentStatus | undefined => {
+    switch (orderStatus) {
+      case 'delivered':
+        return 'completed';
+      case 'refunded':
+        return 'refunded';
+      case 'cancelled':
+        return 'failed';
+      default:
+        return undefined; // Keep existing payment status
+    }
+  };
+
   const handleStatusSelect = (newStatus: OrderStatus) => {
     setIsPending(true);
-    onStatusChange(order.id, newStatus);
+    const newPaymentStatus = getPaymentStatusForOrderStatus(newStatus);
+    onStatusChange(order.id, newStatus, newPaymentStatus);
     setOpen(false);
     // Reset pending state after a short delay
     setTimeout(() => setIsPending(false), 500);
   };
 
   const statuses: OrderStatus[] = ['pending', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded'];
+
+  // Show indicator if payment status will change
+  const getStatusDescription = (status: OrderStatus) => {
+    const paymentStatus = getPaymentStatusForOrderStatus(status);
+    if (!paymentStatus || paymentStatus === order.paymentStatus) return null;
+    return `→ Payment: ${paymentStatus}`;
+  };
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -216,22 +239,32 @@ function StatusCell({
           {getOrderStatusBadge(order.status)}
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-[200px] p-2" align="start">
+      <PopoverContent className="w-[240px] p-2" align="start">
         <p className="text-sm font-medium mb-2 text-muted-foreground">Change Status</p>
         <div className="space-y-1">
-          {statuses.map((status) => (
-            <button
-              key={status}
-              onClick={() => handleStatusSelect(status)}
-              className={cn(
-                'w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors',
-                'hover:bg-muted',
-                order.status === status && 'bg-accent'
-              )}
-            >
-              {getOrderStatusBadge(status as OrderStatus)}
-            </button>
-          ))}
+          {statuses.map((status) => {
+            const statusDescription = getStatusDescription(status);
+            return (
+              <button
+                key={status}
+                onClick={() => handleStatusSelect(status)}
+                className={cn(
+                  'w-full flex flex-col items-start gap-1 px-3 py-2 rounded-md text-sm transition-colors',
+                  'hover:bg-muted',
+                  order.status === status && 'bg-accent'
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  {getOrderStatusBadge(status as OrderStatus)}
+                </div>
+                {statusDescription && (
+                  <span className="text-xs text-muted-foreground ml-6">
+                    {statusDescription}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       </PopoverContent>
     </Popover>
@@ -789,8 +822,12 @@ export default function AdminOrdersPage() {
       cell: ({ row }) => (
         <StatusCell
           order={row.original}
-          onStatusChange={(orderId, newStatus) => {
-            updateOrder.mutate({ orderId, updates: { status: newStatus } });
+          onStatusChange={(orderId, newStatus, newPaymentStatus) => {
+            const updates: Partial<Order> = { status: newStatus };
+            if (newPaymentStatus) {
+              updates.paymentStatus = newPaymentStatus;
+            }
+            updateOrder.mutate({ orderId, updates });
           }}
         />
       ),
