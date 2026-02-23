@@ -1,28 +1,10 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
-import {
-  Package,
-  TrendingUp,
-  TrendingDown,
-  ShoppingBag,
-  Truck,
-  CheckCircle2,
-  Clock,
-  XCircle,
-  Eye,
-  Pencil,
-  Trash2,
-  Download,
-  RefreshCw,
-  Filter,
-  Calendar,
-  Search,
-  Loader2,
-} from 'lucide-react';
-import { format } from 'date-fns';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState, useMemo, useEffect, type ComponentType } from 'react';
+import { format, isWithinInterval } from 'date-fns';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { getSupabaseBrowserClient } from '@kit/supabase/browser-client';
+import type { ColumnDef } from '@tanstack/react-table';
 
 import { PageBody } from '@kit/ui/page';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@kit/ui/card';
@@ -38,14 +20,6 @@ import {
   SelectValue,
 } from '@kit/ui/select';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@kit/ui/table';
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -55,89 +29,64 @@ import {
 } from '@kit/ui/dialog';
 import { Label } from '@kit/ui/label';
 import { Textarea } from '@kit/ui/textarea';
-import { AdminDataTable, FilterConfig, ViewMode } from '../_components/admin-data-table';
+import { Checkbox } from '@kit/ui/checkbox';
+import { toast } from 'sonner';
 
-// Types
-type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'refunded';
-type DeliveryStatus = 'preparing' | 'in_transit' | 'out_for_delivery' | 'delivered' | 'failed' | 'returned';
-type PaymentStatus = 'pending' | 'completed' | 'failed' | 'refunded';
+import {
+  Package,
+  TrendingUp,
+  ShoppingBag,
+  Truck,
+  CheckCircle2,
+  Check,
+  Clock,
+  XCircle,
+  Eye,
+  Pencil,
+  Trash2,
+  Download,
+  RefreshCw,
+  Search,
+  Loader2,
+  ChevronDown,
+  ChevronUp,
+  ChevronsUpDown,
+  MoreHorizontal,
+} from 'lucide-react';
 
-interface Order {
-  id: string;
-  orderNumber: string;
-  account: {
-    id: string;
-    name: string;
-    email: string;
-  };
-  status: OrderStatus;
-  deliveryStatus: DeliveryStatus;
-  paymentStatus: PaymentStatus;
-  subtotal: number;
-  taxAmount: number;
-  shippingAmount: number;
-  discountAmount: number;
-  total: number;
-  items: {
-    id: string;
-    book: {
-      id: string;
-      title: string;
-      author: string;
-      coverImage: string;
-    };
-    quantity: number;
-    unitPrice: number;
-    totalPrice: number;
-  }[];
-  shippingAddress: {
-    name: string;
-    email: string;
-    phone: string;
-    addressLine1: string;
-    addressLine2: string;
-    city: string;
-    state: string;
-    postalCode: string;
-    country: string;
-  };
-  estimatedDeliveryDate?: Date;
-  actualDeliveryDate?: Date;
-  trackingNumber?: string;
-  carrier?: string;
-  couponCode?: string;
-  customerNotes?: string;
-  adminNotes?: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
+import { AdminDataTable, type FilterConfig, type ExportFormat } from '../_components/admin-data-table';
+import {
+  fetchOrdersAction,
+  updateOrderAction,
+  deleteOrdersAction,
+  type Order,
+  type OrderStatus,
+  type PaymentStatus,
+} from './_actions';
+import { Popover, PopoverContent, PopoverTrigger } from '@kit/ui/popover';
 
 // Fetch orders hook with real-time updates
 function useOrders() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    // Create Supabase client for realtime
     const supabase = getSupabaseBrowserClient();
 
-    // Subscribe to orders table changes
     const channel = supabase
       .channel('admin-orders-changes')
       .on(
         'postgres_changes',
         {
-          event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+          event: '*',
           schema: 'public',
           table: 'orders',
         },
         () => {
-          // Refetch orders when any change occurs
           queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
         }
       )
       .subscribe();
 
-    // Cleanup on unmount
     return () => {
       supabase.removeChannel(channel);
     };
@@ -146,14 +95,9 @@ function useOrders() {
   return useQuery({
     queryKey: ['admin-orders'],
     queryFn: async () => {
-      const response = await fetch('/api/admin/orders');
-      if (!response.ok) {
-        throw new Error('Failed to fetch orders');
-      }
-      const result = await response.json();
-      return result.data as Order[];
+      const result = await fetchOrdersAction();
+      return result as Order[];
     },
-    // No cache for admin dashboard - always fetch fresh data
     staleTime: 0,
     gcTime: 0,
     refetchOnWindowFocus: true,
@@ -162,15 +106,59 @@ function useOrders() {
   });
 }
 
+// Update order mutation
+function useUpdateOrder() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ orderId, updates }: { orderId: string; updates: Partial<Order> }) => {
+      return await updateOrderAction({
+        orderId,
+        updates: {
+          status: updates.status,
+          trackingNumber: updates.trackingNumber,
+          carrier: updates.carrier,
+          adminNotes: updates.adminNotes,
+        },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
+      toast.success('Order updated successfully');
+    },
+    onError: () => {
+      toast.error('Failed to update order');
+    },
+  });
+}
+
+// Delete order mutation
+function useDeleteOrders() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (orderIds: string[]) => {
+      return await deleteOrdersAction(orderIds);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
+      toast.success('Orders deleted successfully');
+    },
+    onError: () => {
+      toast.error('Failed to delete orders');
+    },
+  });
+}
+
 // Status Badge Components
 function getOrderStatusBadge(status: OrderStatus) {
-  const variants: Record<OrderStatus, { color: string; icon: any }> = {
+  const variants: Record<OrderStatus, { color: string; icon: ComponentType<{ className?: string }> }> = {
     pending: { color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200', icon: Clock },
     processing: { color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200', icon: Package },
     shipped: { color: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200', icon: Truck },
     delivered: { color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200', icon: CheckCircle2 },
     cancelled: { color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200', icon: XCircle },
-    refunded: { color: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200', icon: TrendingDown },
+    refunded: { color: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200', icon: Trash2 },
   };
 
   const { color, icon: Icon } = variants[status];
@@ -194,42 +182,59 @@ function getPaymentStatusBadge(status: PaymentStatus) {
   return <Badge className={cn('capitalize', variants[status])}>{status}</Badge>;
 }
 
-// Order Card Component (for card view)
-function OrderCard({ order, onClick }: { order: Order; onClick: () => void }) {
+// Status Cell Component with Popover for quick status change
+function StatusCell({
+  order,
+  onStatusChange,
+}: {
+  order: Order;
+  onStatusChange: (orderId: string, newStatus: OrderStatus) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [isPending, setIsPending] = useState(false);
+
+  const handleStatusSelect = (newStatus: OrderStatus) => {
+    setIsPending(true);
+    onStatusChange(order.id, newStatus);
+    setOpen(false);
+    // Reset pending state after a short delay
+    setTimeout(() => setIsPending(false), 500);
+  };
+
+  const statuses: OrderStatus[] = ['pending', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded'];
+
   return (
-    <Card className="hover:shadow-md transition-all cursor-pointer" onClick={onClick}>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="text-lg">{order.orderNumber}</CardTitle>
-            <CardDescription>{format(order.createdAt, 'MMM d, yyyy')}</CardDescription>
-          </div>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          className={cn(
+            'cursor-pointer hover:opacity-80 transition-opacity',
+            isPending && 'opacity-50 pointer-events-none'
+          )}
+          disabled={isPending}
+        >
           {getOrderStatusBadge(order.status)}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[200px] p-2" align="start">
+        <p className="text-sm font-medium mb-2 text-muted-foreground">Change Status</p>
+        <div className="space-y-1">
+          {statuses.map((status) => (
+            <button
+              key={status}
+              onClick={() => handleStatusSelect(status)}
+              className={cn(
+                'w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors',
+                'hover:bg-muted',
+                order.status === status && 'bg-accent'
+              )}
+            >
+              {getOrderStatusBadge(status as OrderStatus)}
+            </button>
+          ))}
         </div>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Customer</span>
-            <span className="text-sm font-medium">{order.account.name}</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Items</span>
-            <span className="text-sm">{order.items.length} items</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Total</span>
-            <span className="text-lg font-bold">${order.total.toFixed(2)}</span>
-          </div>
-          <div className="flex items-center gap-2 pt-2">
-            {getPaymentStatusBadge(order.paymentStatus)}
-            <Badge variant="outline" className="capitalize">
-              {order.deliveryStatus.replace('_', ' ')}
-            </Badge>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -386,33 +391,196 @@ function OrderDetailModal({
               <p className="text-sm p-3 bg-muted/50 rounded-lg">{order.customerNotes}</p>
             </div>
           )}
-
-          {/* Admin Notes */}
-          <div>
-            <Label htmlFor="admin-notes">Admin Notes</Label>
-            <Textarea
-              id="admin-notes"
-              placeholder="Add internal notes about this order..."
-              defaultValue={order.adminNotes}
-              className="mt-2"
-            />
-          </div>
         </div>
 
         <DialogFooter className="gap-2">
           <Button variant="outline" onClick={onClose}>
             Close
           </Button>
-          <Button variant="outline">
-            <Eye className="h-4 w-4 mr-2" />
-            View
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Confirm Order Dialog
+function ConfirmOrderDialog({
+  open,
+  onClose,
+  onConfirm,
+  orders,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  orders: Order[];
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Confirm Order{orders.length > 1 ? 's' : ''}</DialogTitle>
+          <DialogDescription>
+            Are you sure you want to confirm {orders.length > 1 ? `${orders.length} orders` : 'this order'}?
+            The status will be changed to Processing.
+          </DialogDescription>
+        </DialogHeader>
+
+        {orders.length > 0 && (
+          <div className="max-h-60 overflow-y-auto space-y-2">
+            {orders.map((order) => (
+              <div key={order.id} className="flex items-center justify-between p-2 bg-muted/50 rounded">
+                <span className="font-medium">{order.orderNumber}</span>
+                <span className="text-sm text-muted-foreground">{order.account.name}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
           </Button>
-          <Button variant="outline">
-            <Pencil className="h-4 w-4 mr-2" />
-            Edit
+          <Button onClick={onConfirm}>
+            Confirm
           </Button>
-          <Button variant="destructive">
-            <Trash2 className="h-4 w-4 mr-2" />
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Edit Order Dialog
+function EditOrderDialog({
+  order,
+  open,
+  onClose,
+  onSave,
+}: {
+  order: Order | null;
+  open: boolean;
+  onClose: () => void;
+  onSave: (updates: Partial<Order>) => void;
+}) {
+  const [status, setStatus] = useState<OrderStatus>('pending');
+  const [trackingNumber, setTrackingNumber] = useState('');
+  const [carrier, setCarrier] = useState('');
+  const [adminNotes, setAdminNotes] = useState('');
+
+  useEffect(() => {
+    if (order) {
+      setStatus(order.status);
+      setTrackingNumber(order.trackingNumber || '');
+      setCarrier(order.carrier || '');
+      setAdminNotes(order.adminNotes || '');
+    }
+  }, [order]);
+
+  const handleSave = () => {
+    onSave({ status, trackingNumber, carrier, adminNotes });
+    onClose();
+  };
+
+  if (!order) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Edit Order {order.orderNumber}</DialogTitle>
+          <DialogDescription>Update order details and tracking information</DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="status">Order Status</Label>
+            <Select value={status} onValueChange={(v) => setStatus(v as OrderStatus)}>
+              <SelectTrigger id="status">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="processing">Processing</SelectItem>
+                <SelectItem value="shipped">Shipped</SelectItem>
+                <SelectItem value="delivered">Delivered</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
+                <SelectItem value="refunded">Refunded</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="tracking">Tracking Number</Label>
+            <Input
+              id="tracking"
+              value={trackingNumber}
+              onChange={(e) => setTrackingNumber(e.target.value)}
+              placeholder="Enter tracking number"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="carrier">Carrier</Label>
+            <Input
+              id="carrier"
+              value={carrier}
+              onChange={(e) => setCarrier(e.target.value)}
+              placeholder="e.g., FedEx, UPS, DHL"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="notes">Admin Notes</Label>
+            <Textarea
+              id="notes"
+              value={adminNotes}
+              onChange={(e) => setAdminNotes(e.target.value)}
+              placeholder="Add internal notes about this order..."
+              rows={3}
+            />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave}>
+            Save Changes
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Delete Confirmation Dialog
+function DeleteConfirmDialog({
+  open,
+  onClose,
+  onConfirm,
+  count,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  count: number;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Delete Order{count > 1 ? 's' : ''}</DialogTitle>
+          <DialogDescription>
+            Are you sure you want to delete {count > 1 ? `${count} orders` : 'this order'}? This action cannot be undone.
+          </DialogDescription>
+        </DialogHeader>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="destructive" onClick={onConfirm}>
             Delete
           </Button>
         </DialogFooter>
@@ -421,97 +589,498 @@ function OrderDetailModal({
   );
 }
 
-export default function AdminOrdersPage() {
-  const [viewMode, setViewMode] = useState<ViewMode>('table');
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>('all');
-  const [searchQuery, setSearchQuery] = useState('');
+// Status Change Dialog
+function StatusChangeDialog({
+  open,
+  onClose,
+  onConfirm,
+  orders,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: (status: OrderStatus) => void;
+  orders: Order[];
+}) {
+  const [selectedStatus, setSelectedStatus] = useState<OrderStatus>('processing');
 
-  // Fetch orders from API
+  const statuses: OrderStatus[] = ['pending', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded'];
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Change Status</DialogTitle>
+          <DialogDescription>
+            Select new status for {orders.length > 1 ? `${orders.length} orders` : 'this order'}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-2 py-4">
+          {statuses.map((status) => (
+            <button
+              key={status}
+              onClick={() => setSelectedStatus(status)}
+              className={cn(
+                'w-full flex items-center justify-between p-3 rounded-lg border-2 transition-all',
+                selectedStatus === status
+                  ? 'border-primary bg-primary/5'
+                  : 'border-border hover:bg-muted'
+              )}
+            >
+              <span className="capitalize">{status}</span>
+              {selectedStatus === status && (
+                <Check className="h-4 w-4 text-primary" />
+              )}
+            </button>
+          ))}
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button onClick={() => onConfirm(selectedStatus)}>
+            Change Status
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export default function AdminOrdersPage() {
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
+  const [selectedRows, setSelectedRows] = useState<Order[]>([]);
+
   const { data: orders = [], isLoading, error, refetch } = useOrders();
+  const updateOrder = useUpdateOrder();
+  const deleteOrders = useDeleteOrders();
+
+  // Filter configurations
+  const filterConfigs: FilterConfig[] = [
+    {
+      key: 'status',
+      label: 'Status',
+      type: 'select',
+      options: [
+        { value: 'pending', label: 'Pending' },
+        { value: 'processing', label: 'Processing' },
+        { value: 'shipped', label: 'Shipped' },
+        { value: 'delivered', label: 'Delivered' },
+        { value: 'cancelled', label: 'Cancelled' },
+        { value: 'refunded', label: 'Refunded' },
+      ],
+    },
+    {
+      key: 'paymentStatus',
+      label: 'Payment',
+      type: 'select',
+      options: [
+        { value: 'pending', label: 'Pending' },
+        { value: 'completed', label: 'Completed' },
+        { value: 'failed', label: 'Failed' },
+        { value: 'refunded', label: 'Refunded' },
+      ],
+    },
+  ];
+
+  // Helper component for sortable header
+  const SortableHeader = ({ column, children }: { column: any; children: React.ReactNode }) => {
+    const isSorted = column.getIsSorted();
+    return (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(isSorted === 'asc')}
+        className="h-auto p-0 font-semibold"
+      >
+        {children}
+        {isSorted === 'asc' ? (
+          <ChevronUp className="ml-2 h-4 w-4" />
+        ) : isSorted === 'desc' ? (
+          <ChevronDown className="ml-2 h-4 w-4" />
+        ) : (
+          <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
+        )}
+      </Button>
+    );
+  };
 
   // Table columns definition
-  const columns = [
+  const columns = useMemo<ColumnDef<Order>[]>(() => [
     {
       accessorKey: 'orderNumber',
-      header: 'Order',
-      cell: ({ row }: any) => (
+      header: ({ column }) => <SortableHeader column={column}>Order</SortableHeader>,
+      cell: ({ row }) => (
         <span className="font-medium">{row.getValue('orderNumber')}</span>
       ),
     },
     {
-      accessorKey: 'account',
-      header: 'Customer',
-      cell: ({ row }: any) => (
-        <div>
-          <p className="font-medium">{row.original.account.name}</p>
-          <p className="text-sm text-muted-foreground">{row.original.account.email}</p>
-        </div>
-      ),
+      accessorKey: 'customer',
+      header: ({ column }) => <SortableHeader column={column}>Customer</SortableHeader>,
+      cell: ({ row }) => {
+        const order = row.original;
+        return (
+          <div>
+            <p className="font-medium">{order.account.name}</p>
+            <p className="text-sm text-muted-foreground">{order.shippingAddress.phone}</p>
+          </div>
+        );
+      },
     },
     {
       accessorKey: 'items',
       header: 'Items',
-      cell: ({ row }: any) => (
-        <span className="text-sm">{row.original.items.length} items</span>
-      ),
+      cell: ({ row }) => {
+        const order = row.original;
+        return (
+          <div className="max-w-xs">
+            {order.items.slice(0, 2).map((item, idx) => (
+              <p key={idx} className="text-sm truncate">
+                {item.quantity}x {item.book.title}
+              </p>
+            ))}
+            {order.items.length > 2 && (
+              <p className="text-sm text-muted-foreground">+{order.items.length - 2} more</p>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: 'shippingAddress',
+      header: 'Delivery Address',
+      cell: ({ row }) => {
+        const address = row.original.shippingAddress;
+        return (
+          <p className="text-sm max-w-xs truncate">
+            {address.city}, {address.state}
+          </p>
+        );
+      },
+    },
+    {
+      accessorKey: 'trackingNumber',
+      header: 'Tracking',
+      cell: ({ row }) => {
+        const tracking = row.original.trackingNumber;
+        return tracking ? (
+          <span className="text-sm font-mono">{tracking}</span>
+        ) : (
+          <span className="text-sm text-muted-foreground">-</span>
+        );
+      },
     },
     {
       accessorKey: 'total',
-      header: 'Total',
-      cell: ({ row }: any) => (
-        <span className="font-medium">${row.getValue('total').toFixed(2)}</span>
-      ),
+      header: ({ column }) => <SortableHeader column={column}>Total</SortableHeader>,
+      cell: ({ row }) => {
+        const total = row.getValue('total') as number;
+        return <span className="font-medium">${total.toFixed(2)}</span>;
+      },
     },
     {
       accessorKey: 'status',
       header: 'Status',
-      cell: ({ row }: any) => getOrderStatusBadge(row.getValue('status')),
+      cell: ({ row }) => (
+        <StatusCell
+          order={row.original}
+          onStatusChange={(orderId, newStatus) => {
+            updateOrder.mutate({ orderId, updates: { status: newStatus } });
+          }}
+        />
+      ),
     },
     {
       accessorKey: 'paymentStatus',
       header: 'Payment',
-      cell: ({ row }: any) => getPaymentStatusBadge(row.getValue('paymentStatus')),
+      cell: ({ row }) => getPaymentStatusBadge(row.getValue('paymentStatus')),
     },
     {
       accessorKey: 'createdAt',
-      header: 'Date',
-      cell: ({ row }: any) => (
-        <span className="text-sm">{format(row.getValue('createdAt'), 'MMM d, yyyy')}</span>
+      header: ({ column }) => <SortableHeader column={column}>Date</SortableHeader>,
+      cell: ({ row }) => (
+        <span className="text-sm">{format(row.getValue('createdAt'), 'MMM d, h:mm a')}</span>
       ),
     },
-  ];
+    {
+      id: 'actions',
+      header: 'Actions',
+      cell: ({ row }) => {
+        const order = row.original;
 
-  // Filter data
-  const filteredData = useMemo(() => {
-    return orders.filter((order) => {
-      const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
-      const matchesPaymentStatus = paymentStatusFilter === 'all' || order.paymentStatus === paymentStatusFilter;
-      const matchesSearch =
-        searchQuery === '' ||
-        order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        order.account.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        order.account.email.toLowerCase().includes(searchQuery.toLowerCase());
+        return (
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={() => { setSelectedOrder(order); setIsViewModalOpen(true); }}
+              title="View"
+            >
+              <Eye className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={() => { setSelectedOrder(order); setIsEditModalOpen(true); }}
+              title="Edit"
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+            {order.status === 'pending' && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 text-green-600 hover:text-green-700"
+                onClick={() => { setSelectedOrder(order); setIsConfirmDialogOpen(true); }}
+                title="Confirm Order"
+              >
+                <Check className="h-4 w-4" />
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+              onClick={() => { setSelectedOrder(order); setIsDeleteDialogOpen(true); }}
+              title="Delete"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        );
+      },
+    },
+  ], []);
 
-      return matchesStatus && matchesPaymentStatus && matchesSearch;
+  // Handle actions
+  const handleConfirmOrder = () => {
+    const ordersToUpdate = selectedRows.length > 0 ? selectedRows : (selectedOrder ? [selectedOrder] : []);
+    ordersToUpdate.forEach((order) => {
+      updateOrder.mutate({ orderId: order.id, updates: { status: 'processing' as OrderStatus } });
     });
-  }, [orders, statusFilter, paymentStatusFilter, searchQuery]);
-
-  const handleRowClick = (order: Order) => {
-    setSelectedOrder(order);
-    setIsModalOpen(true);
+    setIsConfirmDialogOpen(false);
+    setSelectedRows([]);
   };
 
-  const handleExport = (selectedRows: Order[]) => {
-    console.log('Exporting:', selectedRows);
-    // Implement export functionality
+  const handleDeleteOrders = () => {
+    const ordersToDelete = selectedRows.length > 0 ? selectedRows : (selectedOrder ? [selectedOrder] : []);
+    if (ordersToDelete.length > 0) {
+      deleteOrders.mutate(ordersToDelete.map(o => o.id));
+    }
+    setIsDeleteDialogOpen(false);
+    setSelectedRows([]);
   };
 
-  const handleRefresh = () => {
-    refetch();
+  const handleStatusChange = (newStatus: OrderStatus) => {
+    selectedRows.forEach((order) => {
+      updateOrder.mutate({ orderId: order.id, updates: { status: newStatus } });
+    });
+    setIsStatusDialogOpen(false);
+    setSelectedRows([]);
   };
+
+  const handleEditSave = (updates: Partial<Order>) => {
+    if (selectedOrder) {
+      updateOrder.mutate({ orderId: selectedOrder.id, updates });
+    }
+  };
+
+  // Export data to CSV
+  const exportToCSV = (dataToExport: Order[]) => {
+    // Sort by date descending
+    const sortedData = [...dataToExport].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+    // Create CSV headers
+    const headers = [
+      'Order Number',
+      'Customer Name',
+      'Customer Email',
+      'Phone',
+      'Status',
+      'Payment Status',
+      'Items Count',
+      'Subtotal',
+      'Tax',
+      'Shipping',
+      'Discount',
+      'Total',
+      'City',
+      'State',
+      'Country',
+      'Tracking Number',
+      'Carrier',
+      'Created Date',
+    ];
+
+    // Create CSV rows
+    const rows = sortedData.map((order) => [
+      order.orderNumber,
+      order.account.name,
+      order.account.email,
+      order.shippingAddress.phone,
+      order.status,
+      order.paymentStatus,
+      order.items.length.toString(),
+      order.subtotal.toFixed(2),
+      order.taxAmount.toFixed(2),
+      order.shippingAmount.toFixed(2),
+      order.discountAmount.toFixed(2),
+      order.total.toFixed(2),
+      order.shippingAddress.city,
+      order.shippingAddress.state,
+      order.shippingAddress.country,
+      order.trackingNumber || '',
+      order.carrier || '',
+      format(order.createdAt, 'yyyy-MM-dd HH:mm'),
+    ]);
+
+    // Combine headers and rows
+    const csvContent = [
+      headers.join(','),
+      ...rows.map((row) => row.map((cell) => `"${cell}"`).join(',')),
+    ].join('\n');
+
+    // Create blob and download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    const datePrefix = format(new Date(), 'yyyy-MM-dd');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${datePrefix}_orders.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Export data to Excel (as CSV with .xlsx extension for simplicity)
+  const exportToExcel = (dataToExport: Order[]) => {
+    // For simplicity, we'll use CSV format with .xlsx extension
+    // In a real app, you'd use a library like xlsx
+    exportToCSV(dataToExport);
+    toast.info('Excel export uses CSV format. For true Excel format, install the xlsx library.');
+  };
+
+  // Export data to PDF (simplified - opens print dialog)
+  const exportToPDF = (dataToExport: Order[]) => {
+    // Sort by date descending
+    const sortedData = [...dataToExport].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+    // Create a simple HTML table for printing
+    const printContent = `
+      <html>
+        <head>
+          <title>Orders Export</title>
+          <style>
+            body { font-family: Arial, sans-serif; }
+            h1 { color: #333; }
+            table { border-collapse: collapse; width: 100%; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; }
+            tr:nth-child(even) { background-color: #f9f9f9; }
+          </style>
+        </head>
+        <body>
+          <h1>Orders Report - ${format(new Date(), 'MMMM d, yyyy')}</h1>
+          <p>Total Orders: ${sortedData.length}</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Order #</th>
+                <th>Customer</th>
+                <th>Status</th>
+                <th>Total</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${sortedData.map((order) => `
+                <tr>
+                  <td>${order.orderNumber}</td>
+                  <td>${order.account.name}</td>
+                  <td>${order.status}</td>
+                  <td>$${order.total.toFixed(2)}</td>
+                  <td>${format(order.createdAt, 'MMM d, yyyy')}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+      printWindow.print();
+    }
+  };
+
+  const handleExport = (format: ExportFormat, selectedRowsData: Order[]) => {
+    // If no rows selected, export all data
+    const dataToExport = selectedRowsData.length > 0 ? selectedRowsData : orders;
+
+    if (dataToExport.length === 0) {
+      toast.error('No data to export');
+      return;
+    }
+
+    try {
+      switch (format) {
+        case 'csv':
+          exportToCSV(dataToExport);
+          toast.success(`Exported ${dataToExport.length} orders to CSV`);
+          break;
+        case 'excel':
+          exportToExcel(dataToExport);
+          toast.success(`Exported ${dataToExport.length} orders to Excel`);
+          break;
+        case 'pdf':
+          exportToPDF(dataToExport);
+          toast.success(`Preparing PDF for ${dataToExport.length} orders`);
+          break;
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error('Failed to export data');
+    }
+  };
+
+  const handleDelete = (selectedRowsData: Order[]) => {
+    setSelectedRows(selectedRowsData);
+    // Set selectedOrder for single delete, null for bulk delete
+    setSelectedOrder(selectedRowsData.length === 1 ? selectedRowsData[0] ?? null : null);
+    setIsDeleteDialogOpen(true);
+  };
+
+  // Bulk actions renderer (keep only status change and confirm actions)
+  const renderBulkActions = (rows: Order[]) => (
+    <>
+      <Button size="sm" onClick={() => setIsStatusDialogOpen(true)}>
+        Change Status
+      </Button>
+      <Button size="sm" onClick={() => setIsConfirmDialogOpen(true)}>
+        <Check className="h-4 w-4 mr-2" />
+        Confirm ({rows.length})
+      </Button>
+    </>
+  );
+
+  // Calculate stats
+  const stats = useMemo(() => ({
+    total: orders.length,
+    pending: orders.filter(o => o.status === 'pending').length,
+    processing: orders.filter(o => o.status === 'processing').length,
+    revenue: orders.reduce((sum, o) => sum + o.total, 0),
+  }), [orders]);
 
   return (
     <PageBody>
@@ -534,7 +1103,7 @@ export default function AdminOrdersPage() {
               {isLoading ? (
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               ) : (
-                <div className="text-2xl font-bold">{orders.length}</div>
+                <div className="text-2xl font-bold">{stats.total}</div>
               )}
               <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
                 <TrendingUp className="h-3 w-3 text-green-500" />
@@ -550,7 +1119,7 @@ export default function AdminOrdersPage() {
               {isLoading ? (
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               ) : (
-                <div className="text-2xl font-bold">{orders.filter(o => o.status === 'pending').length}</div>
+                <div className="text-2xl font-bold">{stats.pending}</div>
               )}
               <p className="text-xs text-muted-foreground mt-1">Needs attention</p>
             </CardContent>
@@ -563,7 +1132,7 @@ export default function AdminOrdersPage() {
               {isLoading ? (
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               ) : (
-                <div className="text-2xl font-bold">{orders.filter(o => o.status === 'processing').length}</div>
+                <div className="text-2xl font-bold">{stats.processing}</div>
               )}
               <p className="text-xs text-muted-foreground mt-1">Being prepared</p>
             </CardContent>
@@ -576,9 +1145,7 @@ export default function AdminOrdersPage() {
               {isLoading ? (
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               ) : (
-                <div className="text-2xl font-bold">
-                  ${orders.reduce((sum, o) => sum + o.total, 0).toFixed(2)}
-                </div>
+                <div className="text-2xl font-bold">${stats.revenue.toFixed(2)}</div>
               )}
               <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
                 <TrendingUp className="h-3 w-3 text-green-500" />
@@ -611,7 +1178,7 @@ export default function AdminOrdersPage() {
                 <XCircle className="h-12 w-12 text-destructive mb-3" />
                 <p className="text-lg font-semibold mb-2">Failed to load orders</p>
                 <p className="text-sm text-muted-foreground mb-4">There was an error fetching the orders data</p>
-                <Button variant="outline" onClick={handleRefresh} className="gap-2">
+                <Button variant="outline" onClick={() => refetch()} className="gap-2">
                   <RefreshCw className="h-4 w-4" />
                   Try Again
                 </Button>
@@ -625,57 +1192,49 @@ export default function AdminOrdersPage() {
             ) : (
               <AdminDataTable
                 columns={columns}
-                data={filteredData}
-                searchable={true}
-                searchPlaceholder="Search by order number, customer name, or email..."
-                filterable={true}
-                filters={[
-                  {
-                    key: 'status',
-                    label: 'Status',
-                    type: 'select',
-                    options: [
-                      { value: 'all', label: 'All Statuses' },
-                      { value: 'pending', label: 'Pending' },
-                      { value: 'processing', label: 'Processing' },
-                      { value: 'shipped', label: 'Shipped' },
-                      { value: 'delivered', label: 'Delivered' },
-                      { value: 'cancelled', label: 'Cancelled' },
-                    ],
-                  },
-                  {
-                    key: 'paymentStatus',
-                    label: 'Payment',
-                    type: 'select',
-                    options: [
-                      { value: 'all', label: 'All Payments' },
-                      { value: 'pending', label: 'Pending' },
-                      { value: 'completed', label: 'Completed' },
-                      { value: 'failed', label: 'Failed' },
-                      { value: 'refunded', label: 'Refunded' },
-                    ],
-                  },
-                ]}
-                selectable={true}
-                pagination={true}
+                data={orders}
+                isLoading={isLoading}
+                searchable
+                searchPlaceholder="Search by order number, customer, phone..."
+                filterable
+                filters={filterConfigs}
+                selectable
+                pagination
                 pageSize={10}
-                viewModeToggleable={true}
-                defaultViewMode={viewMode}
-                onRowClick={handleRowClick}
+                pageSizeOptions={[10, 25, 50]}
                 onExport={handleExport}
-                onRefresh={handleRefresh}
-                renderCard={(order) => (
-                  <OrderCard order={order as Order} onClick={() => handleRowClick(order as Order)} />
-                )}
-                emptyMessage="No orders found"
+                onDelete={handleDelete}
+                onRefresh={() => refetch()}
+                bulkActions={renderBulkActions}
+                emptyMessage="No orders found matching your filters"
+                showFooter
               />
             )}
           </CardContent>
         </Card>
-
-        {/* Order Detail Modal */}
-        <OrderDetailModal order={selectedOrder} open={isModalOpen} onClose={() => setIsModalOpen(false)} />
       </div>
+
+      {/* Modals */}
+      <OrderDetailModal order={selectedOrder} open={isViewModalOpen} onClose={() => setIsViewModalOpen(false)} />
+      <EditOrderDialog order={selectedOrder} open={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} onSave={handleEditSave} />
+      <ConfirmOrderDialog
+        open={isConfirmDialogOpen}
+        onClose={() => setIsConfirmDialogOpen(false)}
+        onConfirm={handleConfirmOrder}
+        orders={selectedRows.length > 0 ? selectedRows : (selectedOrder ? [selectedOrder] : [])}
+      />
+      <DeleteConfirmDialog
+        open={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={handleDeleteOrders}
+        count={selectedRows.length > 0 ? selectedRows.length : 1}
+      />
+      <StatusChangeDialog
+        open={isStatusDialogOpen}
+        onClose={() => setIsStatusDialogOpen(false)}
+        onConfirm={handleStatusChange}
+        orders={selectedRows}
+      />
     </PageBody>
   );
 }

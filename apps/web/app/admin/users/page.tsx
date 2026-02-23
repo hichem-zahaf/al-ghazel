@@ -671,8 +671,8 @@ export default function AdminUsersPage() {
     setIsModalOpen(true);
   };
 
-  const handleExport = (selectedRows: User[]) => {
-    console.log('Exporting:', selectedRows);
+  const handleExport = (format: 'csv' | 'excel' | 'pdf', selectedRows: User[]) => {
+    console.log('Exporting:', format, selectedRows);
     // Implement export functionality
   };
 

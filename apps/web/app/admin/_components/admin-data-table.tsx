@@ -15,6 +15,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
@@ -41,12 +42,25 @@ import {
   Filter,
   Download,
   RefreshCw,
+  Trash2,
+  FileSpreadsheet,
+  FileText,
+  File,
 } from 'lucide-react';
 import { cn } from '@kit/ui/utils';
 import { Skeleton } from '@kit/ui/skeleton';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@kit/ui/dropdown-menu';
 
 // Types
 export type ViewMode = 'table' | 'card';
+
+export type ExportFormat = 'csv' | 'excel' | 'pdf';
 
 export interface FilterConfig {
   key: string;
@@ -66,13 +80,17 @@ export interface AdminTableProps<TData, TValue> {
   selectable?: boolean;
   pagination?: boolean;
   pageSize?: number;
+  pageSizeOptions?: number[];
   viewModeToggleable?: boolean;
   defaultViewMode?: ViewMode;
   onRowClick?: (row: TData) => void;
-  onExport?: (selectedRows: TData[]) => void;
+  onExport?: (format: ExportFormat, selectedRows: TData[]) => void;
+  onDelete?: (selectedRows: TData[]) => void;
   onRefresh?: () => void;
   renderCard?: (item: TData) => React.ReactNode;
   emptyMessage?: string;
+  bulkActions?: (selectedRows: TData[]) => React.ReactNode;
+  showFooter?: boolean;
 }
 
 export function AdminDataTable<TData, TValue>({
@@ -86,19 +104,24 @@ export function AdminDataTable<TData, TValue>({
   selectable = true,
   pagination = true,
   pageSize = 10,
+  pageSizeOptions = [10, 25, 50],
   viewModeToggleable = false,
   defaultViewMode = 'table',
   onRowClick,
   onExport,
+  onDelete,
   onRefresh,
   renderCard,
   emptyMessage = 'No data found',
+  bulkActions,
+  showFooter = false,
 }: AdminTableProps<TData, TValue>) {
   const [viewMode, setViewMode] = useState<ViewMode>(defaultViewMode);
   const [globalFilter, setGlobalFilter] = useState('');
   const [sorting, setSorting] = useState<any[]>([]);
   const [columnFilters, setColumnFilters] = useState<any[]>([]);
   const [rowSelection, setRowSelection] = useState({});
+  const [currentPageSize, setCurrentPageSize] = useState(pageSize);
 
   // Add selection column if selectable
   const tableColumns = useMemo(() => {
@@ -159,9 +182,15 @@ export function AdminDataTable<TData, TValue>({
     return table.getFilteredSelectedRowModel().rows.map((row) => row.original);
   }, [table]);
 
-  const handleExport = () => {
+  const handleExport = (format: ExportFormat) => {
     if (onExport) {
-      onExport(selectedRows as TData[]);
+      onExport(format, selectedRows as TData[]);
+    }
+  };
+
+  const handleDelete = () => {
+    if (onDelete && selectedRows.length > 0) {
+      onDelete(selectedRows as TData[]);
     }
   };
 
@@ -194,6 +223,12 @@ export function AdminDataTable<TData, TValue>({
     }
 
     return pages;
+  };
+
+  const handlePageSizeChange = (newSize: string) => {
+    const size = Number(newSize);
+    setCurrentPageSize(size);
+    table.setPageSize(size);
   };
 
   return (
@@ -247,11 +282,42 @@ export function AdminDataTable<TData, TValue>({
             </Button>
           )}
 
-          {selectable && selectedRows.length > 0 && onExport && (
-            <Button variant="outline" size="sm" onClick={handleExport}>
-              <Download className="h-4 w-4 mr-2" />
-              Export ({selectedRows.length})
+          {selectable && selectedRows.length > 0 && onDelete && (
+            <Button variant="outline" size="sm" onClick={handleDelete} className="text-destructive hover:text-destructive">
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete ({selectedRows.length})
             </Button>
+          )}
+
+          {selectable && selectedRows.length > 0 && bulkActions && (
+            <div className="flex items-center gap-2">
+              {bulkActions(selectedRows as TData[])}
+            </div>
+          )}
+
+          {onExport && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Download className="h-4 w-4 mr-2" />
+                  Export {selectedRows.length > 0 ? `(${selectedRows.length})` : ''}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleExport('csv')}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Export as CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport('excel')}>
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                  Export as Excel
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport('pdf')}>
+                  <File className="h-4 w-4 mr-2" />
+                  Export as PDF
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
 
           {viewModeToggleable && renderCard && (
@@ -280,7 +346,7 @@ export function AdminDataTable<TData, TValue>({
       {/* Content */}
       {isLoading ? (
         <div className="space-y-3">
-          {Array.from({ length: pageSize }).map((_, i) => (
+          {Array.from({ length: currentPageSize }).map((_, i) => (
             <Skeleton key={i} className="h-16 w-full" />
           ))}
         </div>
@@ -339,6 +405,41 @@ export function AdminDataTable<TData, TValue>({
                 </TableRow>
               )}
             </TableBody>
+            {showFooter && (
+              <TableFooter>
+                <TableRow>
+                  <TableCell colSpan={tableColumns.length} className="bg-muted/50">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">
+                        {selectedRows.length > 0 ? (
+                          <>Selecting {selectedRows.length} of {table.getFilteredRowModel().rows.length} entries</>
+                        ) : (
+                          <>Showing {table.getFilteredRowModel().rows.length} of {data.length} entries</>
+                        )}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground">Rows per page:</span>
+                        <Select
+                          value={String(currentPageSize)}
+                          onValueChange={handlePageSizeChange}
+                        >
+                          <SelectTrigger className="h-7 w-[70px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {pageSizeOptions.map((size) => (
+                              <SelectItem key={size} value={String(size)}>
+                                {size}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              </TableFooter>
+            )}
           </Table>
         </div>
       )}
@@ -347,9 +448,13 @@ export function AdminDataTable<TData, TValue>({
       {pagination && table.getPageCount() > 1 && (
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="text-sm text-muted-foreground">
-            Showing {table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1} to{' '}
-            {Math.min((table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize, table.getFilteredRowModel().rows.length)}{' '}
-            of {table.getFilteredRowModel().rows.length} entries
+            {selectedRows.length > 0 ? (
+              <>Selecting {selectedRows.length} of {table.getFilteredRowModel().rows.length} entries</>
+            ) : (
+              <>Showing {table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1} to{' '}
+                {Math.min((table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize, table.getFilteredRowModel().rows.length)}{' '}
+                of {table.getFilteredRowModel().rows.length} entries</>
+            )}
           </div>
 
           <div className="flex items-center gap-1">
