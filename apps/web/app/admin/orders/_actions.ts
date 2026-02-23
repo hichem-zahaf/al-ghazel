@@ -60,10 +60,110 @@ export interface Order {
 
 export interface UpdateOrderData {
   status?: OrderStatus;
+  previousStatus?: OrderStatus;
   paymentStatus?: PaymentStatus;
   trackingNumber?: string;
   carrier?: string;
   adminNotes?: string;
+}
+
+// Statuses that indicate inventory has been deducted
+const DEDUCTED_INVENTORY_STATUSES: OrderStatus[] = ['shipped', 'delivered'];
+
+// Statuses that indicate inventory should be restored
+const RESTORE_INVENTORY_STATUSES: OrderStatus[] = ['cancelled', 'refunded'];
+
+// Statuses that trigger inventory deduction when transitioning from non-deducted status
+const DEDUCT_INTO_STATUSES: OrderStatus[] = ['shipped', 'delivered'];
+
+/**
+ * Determine if inventory should be deducted based on status change
+ */
+function shouldDeductInventory(previousStatus: OrderStatus, newStatus: OrderStatus): boolean {
+  // Deduct if moving to shipped/delivered from a status where inventory wasn't deducted
+  const wasNotDeducted = !DEDUCTED_INVENTORY_STATUSES.includes(previousStatus);
+  const shouldNowBeDeducted = DEDUCT_INTO_STATUSES.includes(newStatus);
+  return wasNotDeducted && shouldNowBeDeducted;
+}
+
+/**
+ * Determine if inventory should be restored based on status change
+ */
+function shouldRestoreInventory(previousStatus: OrderStatus, newStatus: OrderStatus): boolean {
+  // Restore if moving from shipped/delivered to cancelled/refunded
+  const wasDeducted = DEDUCTED_INVENTORY_STATUSES.includes(previousStatus);
+  const shouldNowBeRestored = RESTORE_INVENTORY_STATUSES.includes(newStatus);
+  return wasDeducted && shouldNowBeRestored;
+}
+
+/**
+ * Update book inventory quantity
+ */
+async function updateBookInventory(
+  supabase: any,
+  bookId: string,
+  quantityChange: number
+): Promise<boolean> {
+  const { data: currentBook } = await supabase
+    .from('books')
+    .select('stock_quantity')
+    .eq('id', bookId)
+    .single();
+
+  if (!currentBook) {
+    console.error(`Book ${bookId} not found`);
+    return false;
+  }
+
+  const newQuantity = Math.max(0, (currentBook.stock_quantity || 0) + quantityChange);
+
+  const { error } = await supabase
+    .from('books')
+    .update({ stock_quantity: newQuantity })
+    .eq('id', bookId);
+
+  if (error) {
+    console.error(`Failed to update inventory for book ${bookId}:`, error);
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Process inventory updates for order items
+ */
+async function processInventoryUpdates(
+  supabase: any,
+  orderId: string,
+  previousStatus: OrderStatus,
+  newStatus: OrderStatus
+): Promise<void> {
+  // Fetch order items
+  const { data: orderItems, error: itemsError } = await supabase
+    .from('order_items')
+    .select('book_id, quantity')
+    .eq('order_id', orderId);
+
+  if (itemsError || !orderItems) {
+    console.error('Failed to fetch order items:', itemsError);
+    return;
+  }
+
+  const shouldDeduct = shouldDeductInventory(previousStatus, newStatus);
+  const shouldRestore = shouldRestoreInventory(previousStatus, newStatus);
+
+  if (!shouldDeduct && !shouldRestore) {
+    return; // No inventory change needed
+  }
+
+  const quantityMultiplier = shouldDeduct ? -1 : 1;
+
+  // Process each item
+  for (const item of orderItems) {
+    const quantityChange = item.quantity * quantityMultiplier;
+    await updateBookInventory(supabase, item.book_id, quantityChange);
+  }
 }
 
 /**
@@ -198,6 +298,20 @@ export async function fetchOrdersAction(): Promise<Order[]> {
 export async function updateOrderAction({ orderId, updates }: { orderId: string; updates: UpdateOrderData }) {
   const supabase = getSupabaseServerAdminClient();
 
+  // Get current order status for inventory management
+  const { data: currentOrder } = await supabase
+    .from('orders')
+    .select('status')
+    .eq('id', orderId)
+    .single();
+
+  if (!currentOrder) {
+    throw new Error('Order not found');
+  }
+
+  const previousStatus = updates.previousStatus || currentOrder.status;
+  const newStatus = updates.status;
+
   const updateData: any = {};
   if (updates.status !== undefined) updateData.status = updates.status;
   if (updates.paymentStatus !== undefined) updateData.payment_status = updates.paymentStatus;
@@ -212,6 +326,11 @@ export async function updateOrderAction({ orderId, updates }: { orderId: string;
 
   if (error) {
     throw new Error(error.message);
+  }
+
+  // Process inventory updates if status changed
+  if (newStatus && previousStatus && newStatus !== previousStatus) {
+    await processInventoryUpdates(supabase, orderId, previousStatus, newStatus);
   }
 
   revalidatePath('/admin/orders');

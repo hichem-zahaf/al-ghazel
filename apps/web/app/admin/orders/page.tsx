@@ -106,16 +106,22 @@ function useOrders() {
   });
 }
 
+// Local interface for order updates that includes previousStatus
+interface OrderUpdates extends Partial<Order> {
+  previousStatus?: OrderStatus;
+}
+
 // Update order mutation
 function useUpdateOrder() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ orderId, updates }: { orderId: string; updates: Partial<Order> }) => {
+    mutationFn: async ({ orderId, updates }: { orderId: string; updates: OrderUpdates }) => {
       return await updateOrderAction({
         orderId,
         updates: {
           status: updates.status,
+          previousStatus: updates.previousStatus,
           paymentStatus: updates.paymentStatus,
           trackingNumber: updates.trackingNumber,
           carrier: updates.carrier,
@@ -189,7 +195,7 @@ function StatusCell({
   onStatusChange,
 }: {
   order: Order;
-  onStatusChange: (orderId: string, newStatus: OrderStatus, newPaymentStatus?: PaymentStatus) => void;
+  onStatusChange: (orderId: string, previousStatus: OrderStatus, newStatus: OrderStatus, newPaymentStatus?: PaymentStatus) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [isPending, setIsPending] = useState(false);
@@ -208,10 +214,27 @@ function StatusCell({
     }
   };
 
+  // Show inventory change indicator
+  const getInventoryDescription = (newStatus: OrderStatus): string | null => {
+    const previousStatus = order.status;
+    const isMovingToShippedOrDelivered = (newStatus === 'shipped' || newStatus === 'delivered') &&
+      !['shipped', 'delivered'].includes(previousStatus);
+    const isRestoring = ['cancelled', 'refunded'].includes(newStatus) &&
+      ['shipped', 'delivered'].includes(previousStatus);
+
+    if (isMovingToShippedOrDelivered) {
+      return '→ Stock will be deducted';
+    }
+    if (isRestoring) {
+      return '→ Stock will be restored';
+    }
+    return null;
+  };
+
   const handleStatusSelect = (newStatus: OrderStatus) => {
     setIsPending(true);
     const newPaymentStatus = getPaymentStatusForOrderStatus(newStatus);
-    onStatusChange(order.id, newStatus, newPaymentStatus);
+    onStatusChange(order.id, order.status, newStatus, newPaymentStatus);
     setOpen(false);
     // Reset pending state after a short delay
     setTimeout(() => setIsPending(false), 500);
@@ -822,8 +845,11 @@ export default function AdminOrdersPage() {
       cell: ({ row }) => (
         <StatusCell
           order={row.original}
-          onStatusChange={(orderId, newStatus, newPaymentStatus) => {
-            const updates: Partial<Order> = { status: newStatus };
+          onStatusChange={(orderId, previousStatus, newStatus, newPaymentStatus) => {
+            const updates: OrderUpdates = {
+              status: newStatus,
+              previousStatus, // Pass previous status for inventory tracking
+            };
             if (newPaymentStatus) {
               updates.paymentStatus = newPaymentStatus;
             }
