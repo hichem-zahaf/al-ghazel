@@ -13,6 +13,8 @@ interface CategoryBooksResponse {
 
 interface BookWithDetails {
   id: string;
+  slug: string;
+  short_id: string;
   title: string;
   subtitle: string | null;
   description: string | null;
@@ -110,6 +112,8 @@ function transformBookToBookType(dbBook: BookWithDetails, allCategories: Array<{
 
   return {
     id: dbBook.id,
+    slug: dbBook.slug ?? '',
+    shortId: dbBook.short_id ?? '',
     title: dbBook.title,
     author: {
       id: dbBook.authors.id,
@@ -210,6 +214,8 @@ export async function GET(
       .from('books')
       .select(`
         id,
+        slug,
+        short_id,
         title,
         subtitle,
         description,

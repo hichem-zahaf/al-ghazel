@@ -47,17 +47,17 @@ BEGIN
   INSERT INTO public.categories (id, name, slug, icon, description, book_count)
   VALUES
     ('aaaaaaaa-0001-0001-0001-000000000001', 'Fiction', 'fiction', 'BookOpen', 'Explore imaginary worlds and stories', 0),
-    ('aaaaaaaa-0002-0002-0002-000000000002', 'Non-Fiction', 'non-fiction', 'MdAutoStories', 'Real stories and factual information', 7),
-    ('aaaaaaaa-0003-0003-0003-000000000003', 'Mystery', 'mystery', 'RiSearchLine', 'Suspenseful puzzles and thrillers', 5),
-    ('aaaaaaaa-0004-0004-0004-000000000004', 'Romance', 'romance', 'FaHeart', 'Love stories and relationships', 4),
-    ('aaaaaaaa-0005-0005-0005-000000000005', 'Science Fiction', 'sci-fi', 'FaRocket', 'Futuristic worlds and technology', 3),
-    ('aaaaaaaa-0006-0006-0006-000000000006', 'Fantasy', 'fantasy', 'RiMagicLine', 'Magical worlds and mythical creatures', 3),
-    ('aaaaaaaa-0007-0007-0007-000000000007', 'Biography', 'biography', 'FaUser', 'Life stories of remarkable people', 1),
-    ('aaaaaaaa-0008-0008-0008-000000000008', 'Self-Help', 'self-help', 'MdOutlineEmojiObjects', 'Personal development and growth', 5),
-    ('aaaaaaaa-0009-0009-0009-000000000009', 'History', 'history', 'FaLandmark', 'Events and stories from the past', 2),
-    ('aaaaaaaa-0010-0010-0010-000000000010', 'Thriller', 'thriller', 'FaBolt', 'Heart-pounding suspense', 6),
-    ('aaaaaaaa-0011-0011-0011-000000000011', 'Children', 'children', 'FaChildren', 'Books for young readers', 1),
-    ('aaaaaaaa-0012-0012-0012-000000000012', 'Poetry', 'poetry', 'IoSparkles', 'Beautiful verses and prose', 2);
+    ('aaaaaaaa-0002-0002-0002-000000000002', 'Non-Fiction', 'non-fiction', 'MdAutoStories', 'Real stories and factual information', 0),
+    ('aaaaaaaa-0003-0003-0003-000000000003', 'Mystery', 'mystery', 'RiSearchLine', 'Suspenseful puzzles and thrillers', 0),
+    ('aaaaaaaa-0004-0004-0004-000000000004', 'Romance', 'romance', 'FaHeart', 'Love stories and relationships', 0),
+    ('aaaaaaaa-0005-0005-0005-000000000005', 'Science Fiction', 'sci-fi', 'FaRocket', 'Futuristic worlds and technology', 0),
+    ('aaaaaaaa-0006-0006-0006-000000000006', 'Fantasy', 'fantasy', 'RiMagicLine', 'Magical worlds and mythical creatures', 0),
+    ('aaaaaaaa-0007-0007-0007-000000000007', 'Biography', 'biography', 'FaUser', 'Life stories of remarkable people', 0),
+    ('aaaaaaaa-0008-0008-0008-000000000008', 'Self-Help', 'self-help', 'MdOutlineEmojiObjects', 'Personal development and growth', 0),
+    ('aaaaaaaa-0009-0009-0009-000000000009', 'History', 'history', 'FaLandmark', 'Events and stories from the past', 0),
+    ('aaaaaaaa-0010-0010-0010-000000000010', 'Thriller', 'thriller', 'FaBolt', 'Heart-pounding suspense', 0),
+    ('aaaaaaaa-0011-0011-0011-000000000011', 'Children', 'children', 'FaChildren', 'Books for young readers', 0),
+    ('aaaaaaaa-0012-0012-0012-000000000012', 'Poetry', 'poetry', 'IoSparkles', 'Beautiful verses and prose', 0);
 EXCEPTION
   WHEN unique_violation THEN
     NULL; -- Ignore if already exists

@@ -5,6 +5,8 @@
 
 export interface Book {
   id: string;
+  slug: string;
+  shortId: string;
   title: string;
   author: Author;
   coverImage: string;

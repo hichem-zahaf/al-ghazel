@@ -40,6 +40,8 @@ interface BookDetailProps {
 function transformBook(book: any): Book {
   return {
     id: book.id,
+    slug: book.slug || '',
+    shortId: book.short_id || '',
     title: book.title,
     author: {
       id: book.authors?.id || '',

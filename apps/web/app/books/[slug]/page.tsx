@@ -3,7 +3,68 @@ import { BookDetail } from './_components/book-detail';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 interface BookPageProps {
-  params: Promise<{ id: string }>;
+  params: Promise<{ slug: string }>;
+}
+
+/**
+ * Parse the slug parameter to extract either:
+ * 1. A slug-shortId combination (new format): "the-great-gatsby-AB3XK9MN"
+ * 2. A UUID (legacy format): "fe05d6c2-915e-49e2-84b9-994048599cdb"
+ */
+function parseSlugParam(slugParam: string | undefined): { type: 'uuid' | 'slug-short_id'; slug?: string; shortId?: string; id?: string } {
+  // Safety check for undefined
+  if (!slugParam || typeof slugParam !== 'string') {
+    return { type: 'uuid', id: '' };
+  }
+
+  // Check if it's a UUID format (has hyphens and matches UUID pattern)
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (uuidRegex.test(slugParam)) {
+    return { type: 'uuid', id: slugParam };
+  }
+
+  // Otherwise, parse as slug-short_id format
+  // The short_id is always 8 characters uppercase alphanumeric at the end
+  const match = slugParam.match(/^(.+)-([A-Z0-9]{8})$/);
+  if (match) {
+    return { type: 'slug-short_id', slug: match[1], shortId: match[2] };
+  }
+
+  // Fallback: treat as UUID (for backward compatibility)
+  return { type: 'uuid', id: slugParam };
+}
+
+async function getBookBySlugAndShortId(slug: string, shortId: string) {
+  const supabase = getSupabaseServerClient();
+
+  const { data, error } = await supabase
+    .from('books')
+    .select(`
+      *,
+      authors (
+        id,
+        name,
+        bio,
+        avatar_url
+      ),
+      book_categories (
+        categories (
+          id,
+          name,
+          slug,
+          description
+        )
+      )
+    `)
+    .eq('slug', slug)
+    .eq('short_id', shortId)
+    .single();
+
+  if (error || !data) {
+    return null;
+  }
+
+  return data;
 }
 
 async function getBook(id: string) {
@@ -90,8 +151,18 @@ async function getRecommendedBooks(currentBookId: string, authorId: string, limi
 }
 
 export default async function BookPage({ params }: BookPageProps) {
-  const { id } = await params;
-  const book = await getBook(id);
+  const { slug: slugParam } = await params;
+  const parsed = parseSlugParam(slugParam);
+
+  let book;
+
+  if (parsed.type === 'slug-short_id' && parsed.slug && parsed.shortId) {
+    // New format: lookup by slug and short_id
+    book = await getBookBySlugAndShortId(parsed.slug, parsed.shortId);
+  } else {
+    // Legacy format: lookup by UUID
+    book = await getBook(parsed.id!);
+  }
 
   if (!book) {
     notFound();
@@ -107,8 +178,16 @@ export default async function BookPage({ params }: BookPageProps) {
 }
 
 export async function generateMetadata({ params }: BookPageProps) {
-  const { id } = await params;
-  const book = await getBook(id);
+  const { slug: slugParam } = await params;
+  const parsed = parseSlugParam(slugParam);
+
+  let book;
+
+  if (parsed.type === 'slug-short_id' && parsed.slug && parsed.shortId) {
+    book = await getBookBySlugAndShortId(parsed.slug, parsed.shortId);
+  } else {
+    book = await getBook(parsed.id!);
+  }
 
   if (!book) {
     return {

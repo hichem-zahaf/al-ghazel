@@ -17,6 +17,17 @@ import { useCartStore } from '~/lib/store/cart-store';
 import { triggerAddToCartAnimation, showAddToCartToast, isBookInCart } from '~/lib/utils/cart-utils';
 import type { Book } from '../../../../types/bookstore';
 
+// Generate book URL from slug and shortId
+function getBookUrl(book: Book): string {
+  // Use slug and shortId for SEO-friendly and unique URLs
+  // Fallback to id for backward compatibility during migration
+  if (book.slug && book.shortId) {
+    return `/books/${book.slug}-${book.shortId}`;
+  }
+  // Temporary fallback for books without slug/shortId yet
+  return `/books/${book.id}`;
+}
+
 // Generate deterministic pseudo-random number from string
 function generateReviewCount(id: string): number {
   let hash = 0;
@@ -86,7 +97,7 @@ export function BookCard({
   if (variant === 'mercury' || (variant === 'default' && isPlanetVariant)) {
     return (
       <Link
-        href={`/books/${book.id}`}
+        href={getBookUrl(book)}
         className={cn('group', className)}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
@@ -159,7 +170,7 @@ export function BookCard({
   if (variant === 'venus') {
     return (
       <Link
-        href={`/books/${book.id}`}
+        href={getBookUrl(book)}
         className={cn('group block', className)}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
@@ -254,7 +265,7 @@ export function BookCard({
   if (variant === 'mars') {
     return (
       <Link
-        href={`/books/${book.id}`}
+        href={getBookUrl(book)}
         className={cn('group block', className)}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
@@ -338,7 +349,7 @@ export function BookCard({
 
     return (
       <Link
-        href={`/books/${book.id}`}
+        href={getBookUrl(book)}
         className={cn('group', className)}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
@@ -527,7 +538,7 @@ export function BookCard({
   if (variant === 'compact') {
     return (
       <Link
-        href={`/books/${book.id}`}
+        href={getBookUrl(book)}
         className={cn(
           'flex-shrink-0 w-48',
           className

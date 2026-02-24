@@ -104,6 +104,8 @@ const defaultConfig: Record<string, Record<string, unknown>> = {
 // Database types
 type DbBook = {
   id: string;
+  slug: string;
+  short_id: string;
   title: string;
   subtitle: string | null;
   description: string | null;
@@ -221,6 +223,8 @@ function transformBook(dbBook: DbBook): Book {
 
   return {
     id: dbBook.id,
+    slug: dbBook.slug ?? '',
+    shortId: dbBook.short_id ?? '',
     title: dbBook.title,
     author: transformAuthor(dbBook.authors),
     coverImage: dbBook.cover_image_url ?? '/images/book-placeholder.jpg',

@@ -18,6 +18,14 @@ import { Separator } from '@kit/ui/separator';
 import { cn } from '@kit/ui/utils';
 import { useCartStore } from '~/lib/store/cart-store';
 
+// Generate book URL from slug and shortId
+function getBookUrl(book: { id: string; slug?: string; shortId?: string }): string {
+  if (book.slug && book.shortId) {
+    return `/books/${book.slug}-${book.shortId}`;
+  }
+  return `/books/${book.id}`;
+}
+
 interface ValidatedCoupon {
   code: string;
   discountType: string;
@@ -411,7 +419,7 @@ function CartItemCard({ item, onRemove }: CartItemCardProps) {
         <div className="flex justify-between gap-4 mb-2">
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-base mb-1 line-clamp-2">
-              <Link href={`/books/${book.id}`} className="hover:text-orange transition-colors">
+              <Link href={getBookUrl(book)} className="hover:text-orange transition-colors">
                 {book.title}
               </Link>
             </h3>

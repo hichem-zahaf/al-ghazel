@@ -13,6 +13,8 @@ interface ExploreResponse {
 
 interface BookWithDetails {
   id: string;
+  slug: string;
+  short_id: string;
   title: string;
   subtitle: string | null;
   description: string | null;
@@ -493,6 +495,8 @@ async function getSeededRandomBooksWithBoost(
 function transformBookToBookType(dbBook: BookWithDetails): Book {
   return {
     id: dbBook.id,
+    slug: dbBook.slug ?? '',
+    shortId: dbBook.short_id ?? '',
     title: dbBook.title,
     author: {
       id: dbBook.authors.id,

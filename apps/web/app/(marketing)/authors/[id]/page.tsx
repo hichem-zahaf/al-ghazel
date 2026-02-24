@@ -25,6 +25,8 @@ interface Author {
 
 interface Book {
   id: string;
+  slug: string;
+  short_id: string;
   title: string;
   subtitle: string | null;
   description: string | null;
@@ -69,6 +71,8 @@ async function getAuthorBooks(authorId: string): Promise<Book[]> {
     .from('books')
     .select(`
       id,
+      slug,
+      short_id,
       title,
       subtitle,
       description,
@@ -102,6 +106,8 @@ async function getAuthorBooks(authorId: string): Promise<Book[]> {
 function transformBook(book: Book) {
   return {
     id: book.id,
+    slug: book.slug ?? '',
+    shortId: book.short_id ?? '',
     title: book.title,
     author: {
       id: book.authors?.id || '',

@@ -425,6 +425,8 @@ export type Database = {
           publisher: string | null
           rating: number | null
           rating_count: number | null
+          short_id: string | null
+          slug: string | null
           status: string | null
           stock_quantity: number | null
           subtitle: string | null
@@ -455,6 +457,8 @@ export type Database = {
           publisher?: string | null
           rating?: number | null
           rating_count?: number | null
+          short_id?: string | null
+          slug?: string | null
           status?: string | null
           stock_quantity?: number | null
           subtitle?: string | null
@@ -485,6 +489,8 @@ export type Database = {
           publisher?: string | null
           rating?: number | null
           rating_count?: number | null
+          short_id?: string | null
+          slug?: string | null
           status?: string | null
           stock_quantity?: number | null
           subtitle?: string | null
@@ -1265,6 +1271,10 @@ export type Database = {
         Args: { category_ids: string[] }
         Returns: undefined
       }
+      generate_slug: {
+        Args: { text: string }
+        Returns: string
+      }
       get_or_create_cart: {
         Args: { user_id?: string }
         Returns: string
@@ -1394,7 +1404,7 @@ export type Database = {
       }
       l2_normalize: {
         Args: { "": string } | { "": unknown } | { "": unknown }
-        Returns: unknown
+        Returns: string
       }
       match_books: {
         Args: {

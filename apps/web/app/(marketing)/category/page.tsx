@@ -17,6 +17,8 @@ interface Category {
 
 interface BookWithDetails {
   id: string;
+  slug: string;
+  short_id: string;
   title: string;
   subtitle: string | null;
   description: string | null;
@@ -55,6 +57,8 @@ async function getCategoriesWithBooks(): Promise<CategoryWithBooks[]> {
         .from('books')
         .select(`
           id,
+          slug,
+          short_id,
           title,
           subtitle,
           description,
@@ -97,6 +101,8 @@ function transformBook(book: BookWithDetails, allCategories: Category[]): Book {
 
   return {
     id: book.id,
+    slug: book.slug ?? '',
+    shortId: book.short_id ?? '',
     title: book.title,
     author: {
       id: book.authors?.id || '',
