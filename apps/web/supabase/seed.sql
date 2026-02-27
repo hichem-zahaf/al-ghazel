@@ -38,7 +38,6 @@ EXCEPTION
     NULL; -- Ignore if already exists
 END $$;
 
-
 -- ============================================
 -- INSERT CATEGORIES FROM MOCK DATA
 -- ============================================
